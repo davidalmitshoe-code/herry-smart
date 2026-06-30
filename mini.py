@@ -77,7 +77,7 @@ def api_login():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # When deployed, change this URL to your live username.pythonanywhere.com link
-    mini_app_url = "https://yourusername.pythonanywhere.com/" 
+    mini_app_url = "https://davidalmitshoe-code.github.io/herry-smart/" 
     
     keyboard = [
         [InlineKeyboardButton("🎵 Open UMC Wallet", web_app=WebAppInfo(url=mini_app_url))]

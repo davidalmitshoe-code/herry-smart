@@ -2,7 +2,6 @@ import os
 import json
 import logging
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -10,7 +9,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "8882818453:AAGHmZ6ryquopL-IKgh3kCdna70SoxDjmWc"
-OWNER_CHAT_ID = " 998942116" 
+OWNER_CHAT_ID = "998942116" # Fixed space syntax string bug
 
 DB_FILE = "umc_database.json"
 
@@ -76,7 +75,7 @@ def api_login():
     return jsonify({"status": "success", "user": db["users"][name]})
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # When deployed, change this URL to your live username.pythonanywhere.com link
+    # This is your GitHub frontend URL address block
     mini_app_url = "https://davidalmitshoe-code.github.io/herry-smart/" 
     
     keyboard = [
@@ -103,7 +102,6 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
         total_amount = payload.get("total_amount")
         status = payload.get("payment_status")
         
-        # 1. User Success Message Receipt Configuration String Block
         user_receipt = (
             "🎉 **CBE Birr Payment Successful!** 🎉\n\n"
             f"Dear {member_name}, your transaction has been completed successfully.\n\n"
@@ -115,7 +113,6 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
         )
         await update.message.reply_text(user_receipt, parse_mode="Markdown")
         
-        # 2. Comprehensive Admin/Owner Receipt Delivery Bundle
         admin_notification = (
             "🚨 **New Confirmed UMC Transaction Alert** 🚨\n\n"
             f"👤 **Member Name:** {member_name}\n"
@@ -139,4 +136,10 @@ def run_bot_polling():
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
-    run_bot_polling()
+    import threading
+    # Start the Telegram Bot polling loop in the background
+    threading.Thread(target=run_bot_polling, daemon=True).start()
+    
+    # Render assigns an environmental variable named PORT automatically
+    port = int(os.environ.get("PORT", 5000))
+    flask_app.run(host="0.0.0.0", port=port, debug=False)

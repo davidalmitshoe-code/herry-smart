@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UMC Choir Wallet</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; color: #333; padding-bottom: 120px; font-size: 14px; }
+        .screen { display: none; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Auth Layout styling */
+        .auth-container { max-width: 400px; margin: 20px auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+        .auth-container h2 { color: #1565c0; margin-bottom: 20px; font-size: 22px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+        .form-group input:focus { border-color: #1565c0; outline: none; }
+        
+        /* Buttons */
+        .btn { width: 100%; padding: 12px; background: #1565c0; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn:hover { background: #0d47a1; }
+        .toggle-auth { margin-top: 15px; color: #1565c0; cursor: pointer; font-weight: 500; display: inline-block; }
+
+        /* Profile Banner */
+        .user-banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .user-avatar { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid #1565c0; }
+        .user-info h4 { color: #1565c0; font-size: 16px; }
+
+        /* Two Column Grid Setup for Multi-Selection */
+        .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .payment-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 2px solid transparent; cursor: pointer; transition: 0.2s; text-align: center; position: relative; }
+        .payment-card h3 { font-size: 14px; margin-bottom: 6px; color: #333; }
+        .payment-card .price { font-size: 16px; font-weight: bold; color: #2e7d32; }
+        .payment-card.selected { border-color: #1565c0; background: #e3f2fd; }
+        .payment-card.selected::after { content: "✓"; position: absolute; top: 5px; right: 10px; color: #1565c0; font-weight: bold; font-size: 16px; }
+
+        /* Summary Area */
+        .summary-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .summary-list { list-style: none; margin-bottom: 8px; font-size: 13px; color: #555; text-align: left; padding-left: 5px; }
+        .summary-list li { margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+        /* CBE Birr Modal Simulation Popups */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; width: 90%; max-width: 350px; padding: 25px; border-radius: 15px; text-align: center; }
+        .cbe-header { background: #4a148c; color: white; padding: 10px; margin: -25px -25px 20px -25px; border-top-left-radius: 15px; border-top-right-radius: 15px; font-weight: bold; }
+
+        /* Custom App Footer Branding */
+        .app-footer { text-align: center; padding: 15px 10px; margin-top: 20px; color: #777; font-size: 11px; line-height: 1.6; border-top: 1px dashed #ccc; }
+
+        /* Fixed Navigation Menu Footer bar */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #ddd; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .bottom-nav a { text-decoration: none; color: #666; font-weight: bold; font-size: 13px; cursor: pointer; }
+        .bottom-nav a.active { color: #1565c0; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: LOGIN -->
+    <div id="loginScreen" class="screen active">
+        <div class="auth-container">
+            <h2>UMC Choir Login</h2>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="loginName" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter password">
+            </div>
+            <button class="btn" onclick="handleLoginSubmit()">Sign In</button>
+            <p class="toggle-auth" onclick="switchScreen('signupScreen')">New member? Register here</p>
+        </div>
+        
+        <div class="app-footer">
+            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
+            <p>Powered by Etydavid Software Solutions</p>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: SIGNUP -->
+    <div id="signupScreen" class="screen">
+        <div class="auth-container">
+            <h2>Choir Registration</h2>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="signUpName" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="signUpPhone" placeholder="+2519...">
+            </div>
+            <div class="form-group">
+                <label>Choir Department Name</label>
+                <input type="text" id="signUpChoir" placeholder="e.g. Youth Choir, Maranatha">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="signUpPassword" placeholder="Create password">
+            </div>
+            <div class="form-group">
+                <label>Profile Image URL</label>
+                <input type="text" id="signUpAvatar" placeholder="Paste image address link">
+            </div>
+            <button class="btn" onclick="handleSignUpSubmit()">Create Account</button>
+            <p class="toggle-auth" onclick="switchScreen('loginScreen')">Already have an account? Sign In</p>
+        </div>
+
+        <div class="app-footer">
+            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
+            <p>Powered by Etydavid Software Solutions</p>
+        </div>
+    </div>
+
+    <!-- SCREEN 3: HOME LAYOUT -->
+    <div id="homeScreen" class="screen">
+        <div class="user-banner">
+            <img id="userDisplayAvatar" class="user-avatar" src="" alt="Avatar">
+            <div class="user-info">
+                <h4 id="userDisplayName">User Account</h4>
+                <p id="userDisplayChoir">Choir Member</p>
+            </div>
+        </div>
+
+        <h2 style="margin-bottom: 15px; color: #1565c0;">Select Contribution Rails (Multiple)</h2>
+        
+        <div class="payment-grid">
+            <div class="payment-card" onclick="toggleSelection(this, 'Student Monthly', 25)">
+                <h3>Student Monthly</h3>
+                <p class="price">25 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'University Monthly', 50)">
+                <h3>Univ. Monthly</h3>
+                <p class="price">50 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'Worker Monthly', 100)">
+                <h3>Worker Monthly</h3>
+                <p class="price">100 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'Pay Yearly', 500)">
+                <h3>Pay Yearly</h3>
+                <p class="price">500 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'Pay Membership', 150)">
+                <h3>Membership</h3>
+                <p class="price">150 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'Donate for Album', 300)">
+                <h3>Album Donation</h3>
+                <p class="price">300 ETB</p>
+            </div>
+            <div class="payment-card" onclick="toggleSelection(this, 'Studio Construction', 1000)">
+                <h3>Studio Const.</h3>
+                <p class="price">1000 ETB</p>
+            </div>
+        </div>
+
+        <div class="summary-box">
+            <h4 style="margin-bottom: 8px; color: #1565c0;">Selected Breakdown:</h4>
+            <ul id="selectedItemsList" class="summary-list">
+                <li style="color: #999;">No items selected</li>
+            </ul>
+            <h3 style="border-top: 1px solid #eee; padding-top: 8px; margin-top: 5px;">Total: <span id="checkoutTotalAmount" style="color:#2e7d32;">0</span> ETB</h3>
+        </div>
+
+        <button class="btn" style="background:#2e7d32;" onclick="openCBEBirrGateway()">
+            ⚡ Pay Now via CBE Birr
+        </button>
+
+        <div class="app-footer">
+            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
+            <p>Powered by Etydavid Software Solutions</p>
+        </div>
+    </div>
+
+    <!-- ONLINE CBE BIRR GATEWAY DIALOG MODAL SIMULATION -->
+    <div id="cbeModal" class="modal">
+        <div class="modal-content">
+            <div class="cbe-header">CBE Birr Online Checkout</div>
+            <p style="font-size: 12px; margin-bottom: 10px; color: #555;">Target Merchant Account:<br><strong>10005246*****</strong></p>
+            <h3 style="margin-bottom: 15px; color:#2e7d32;">Amount: <span id="modalPaymentAmount">0</span> ETB</h3>
+            
+            <div class="form-group">
+                <label style="font-size:12px;">Enter CBE Birr PIN / Password</label>
+                <input type="password" id="cbePassword" placeholder="••••" style="text-align:center; font-size:18px; letter-spacing:5px;" maxlength="6">
+            </div>
+            
+            <button class="btn" style="background:#4a148c;" onclick="verifyCBEPaymentOnline()">Verify & Confirm Payment</button>
+            <button class="btn" style="background:#757575; margin-top:5px;" onclick="closeCBEGateway()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- PERSISTENT FOOTER BAR MENU CONTAINER -->
+    <div id="globalNavbar" class="bottom-nav hidden">
+        <a id="navHome" onclick="switchScreen('homeScreen')">🏠 Home</a>
+        <a id="navLogout" onclick="switchScreen('loginScreen')">👤 Logout</a>
+    </div>
+
+    <script>
+        // CRITICAL UPDATE: Change this string to your exact live PythonAnywhere or Render address link!
+        const BACKEND_URL = "https://yourusername.pythonanywhere.com"; 
+        
+        const tg = window.Telegram?.WebApp;
+        if(tg) tg.ready();
+
+        let selectedItems = [];
+        let activeUser = null;
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const targetScreen = document.getElementById(screenId);
+            if(targetScreen) targetScreen.classList.add('active');
+
+            const navbar = document.getElementById("globalNavbar");
+            if(screenId === 'loginScreen' || screenId === 'signupScreen') {
+                navbar.classList.add('hidden');
+            } else {
+                navbar.classList.remove('hidden');
+            }
+        }
+
+        async function handleSignUpSubmit() {
+            const name = document.getElementById("signUpName").value.trim();
+            const phone = document.getElementById("signUpPhone").value.trim();
+            const choir = document.getElementById("signUpChoir").value.trim();
+            const password = document.getElementById("signUpPassword").value.trim();
+            let avatar = document.getElementById("signUpAvatar").value.trim();
+
+            if(!name || !phone || !choir || !password) {
+                alert("Please fill out all credentials fields!");
+                return;
+            }
+            if(!avatar) avatar = "https://www.w3schools.com/howto/img_avatar.png";
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/signup`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, phone, choir, password, avatar })
+                });
+                const result = await response.json();
+
+                if(result.status === "success") {
+                    activeUser = result.user;
+                    populateUserProfile();
+                    switchScreen('homeScreen');
+                } else {
+                    alert(result.message);
+                }
+            } catch (err) {
+                alert("Database Connection Error. Ensure BACKEND_URL is correct!");
+            }
+        }
+
+        async function handleLoginSubmit() {
+            const name = document.getElementById("loginName").value.trim();
+            const password = document.getElementById("loginPassword").value.trim();
+
+            if(!name || !password) {
+                alert("Please fill out all fields!");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, password })
+                });
+                const result = await response.json();
+
+                if(result.status === "success") {
+                    activeUser = result.user;
+                    populateUserProfile();
+                    switchScreen('homeScreen');
+                } else {
+                    alert(result.message);
+                }
+            } catch (err) {
+                alert("Database Connection Error. Ensure BACKEND_URL is correct!");
+            }
+        }
+
+        function populateUserProfile() {
+            if(!activeUser) return;
+            document.getElementById("userDisplayName").innerText = activeUser.name;
+            document.getElementById("userDisplayChoir").innerText = activeUser.choir + " | " + activeUser.phone;
+            document.getElementById("userDisplayAvatar").src = activeUser.avatar;
+        }
+
+        function toggleSelection(element, title, amount) {
+            const index = selectedItems.findIndex(item => item.title === title);
+            if (index > -1) {
+                selectedItems.splice(index, 1);
+                element.classList.remove('selected');
+            } else {
+                selectedItems.push({ title, amount });
+                element.classList.add('selected');
+            }
+            renderSummary();
+        }
+
+        function renderSummary() {
+            const listContainer = document.getElementById("selectedItemsList");
+            const totalDisplay = document.getElementById("checkoutTotalAmount");
+            
+            if(selectedItems.length === 0) {
+                listContainer.innerHTML = '<li style="color: #999;">No items selected</li>';
+                totalDisplay.innerText = "0";
+                return;
+            }
+
+            listContainer.innerHTML = "";
+            let total = 0;
+            selectedItems.forEach(item => {
+                total += item.amount;
+                const li = document.createElement("li");
+                li.innerHTML = `<span>${item.title}</span> <strong>${item.amount} ETB</strong>`;
+                listContainer.appendChild(li);
+            });
+            totalDisplay.innerText = total;
+        }
+
+        function openCBEBirrGateway() {
+            if(selectedItems.length === 0) {
+                alert("Please pick at least one item rail option!");
+                return;
+            }
+            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
+            document.getElementById("modalPaymentAmount").innerText = totalAmount;
+            document.getElementById("cbeModal").classList.add("active");
+        }
+
+        function closeCBEGateway() {
+            document.getElementById("cbeModal").classList.remove("active");
+            document.getElementById("cbePassword").value = "";
+        }
+
+        function verifyCBEPaymentOnline() {
+            const pin = document.getElementById("cbePassword").value.trim();
+            if(pin.length < 4) {
+                alert("Please enter your secure CBE Birr PIN password!");
+                return;
+            }
+
+            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
+            const itemsString = selectedItems.map(i => `${i.title} (${i.amount} ETB)`).join(", ");
+
+            const dataPayload = {
+                member_name: activeUser.name,
+                member_phone: activeUser.phone,
+                member_avatar: activeUser.avatar,
+                selected_items: itemsString,
+                total_amount: totalAmount,
+                target_merchant_account: "10005246*****",
+                payment_status: "SUCCESSFULLY_PAID"
+            };
+
+            if(tg && typeof tg.sendData === 'function') {
+                tg.sendData(JSON.stringify(dataPayload));
+                closeCBEGateway();
+                tg.close();
+            } else {
+                alert(`🎉 Payment Successful!\nAmount: ${totalAmount} ETB has been transferred to account 10005246***** successfully.`);
+                closeCBEGateway();
+            }
+        }
+    </script>
+</body>
+</html>

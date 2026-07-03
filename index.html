@@ -202,9 +202,7 @@
     </div>
 
     <script>
-        // CRITICAL UPDATE: Change this string to your exact live PythonAnywhere or Render address link!
-        const BACKEND_URL = "https://maranatha-choir.onrender.com"; 
-        
+        // Utilizing relative route links directly makes deployment plug-and-play across any domain
         const tg = window.Telegram?.WebApp;
         if(tg) tg.ready();
 
@@ -238,7 +236,7 @@
             if(!avatar) avatar = "https://www.w3schools.com/howto/img_avatar.png";
 
             try {
-                const response = await fetch(`${BACKEND_URL}/api/signup`, {
+                const response = await fetch(`/api/signup`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, phone, choir, password, avatar })
@@ -253,7 +251,7 @@
                     alert(result.message);
                 }
             } catch (err) {
-                alert("Database Connection Error. Ensure BACKEND_URL is correct!");
+                alert("Database Connection Error. Endpoint requested could not reach server.");
             }
         }
 
@@ -267,7 +265,7 @@
             }
 
             try {
-                const response = await fetch(`${BACKEND_URL}/api/login`, {
+                const response = await fetch(`/api/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, password })
@@ -282,7 +280,7 @@
                     alert(result.message);
                 }
             } catch (err) {
-                alert("Database Connection Error. Ensure BACKEND_URL is correct!");
+                alert("Database Connection Error. Endpoint requested could not reach server.");
             }
         }
 

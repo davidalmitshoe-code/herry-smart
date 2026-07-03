@@ -12,7 +12,6 @@
         .screen.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Auth Layout styling */
         .auth-container { max-width: 400px; margin: 20px auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
         .auth-container h2 { color: #1565c0; margin-bottom: 20px; font-size: 22px; }
         .form-group { margin-bottom: 15px; text-align: left; }
@@ -20,17 +19,14 @@
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
         .form-group input:focus { border-color: #1565c0; outline: none; }
         
-        /* Buttons */
         .btn { width: 100%; padding: 12px; background: #1565c0; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .btn:hover { background: #0d47a1; }
         .toggle-auth { margin-top: 15px; color: #1565c0; cursor: pointer; font-weight: 500; display: inline-block; }
 
-        /* Profile Banner */
         .user-banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .user-avatar { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid #1565c0; }
         .user-info h4 { color: #1565c0; font-size: 16px; }
 
-        /* Two Column Grid Setup for Multi-Selection */
         .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
         .payment-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 2px solid transparent; cursor: pointer; transition: 0.2s; text-align: center; position: relative; }
         .payment-card h3 { font-size: 14px; margin-bottom: 6px; color: #333; }
@@ -38,21 +34,17 @@
         .payment-card.selected { border-color: #1565c0; background: #e3f2fd; }
         .payment-card.selected::after { content: "✓"; position: absolute; top: 5px; right: 10px; color: #1565c0; font-weight: bold; font-size: 16px; }
 
-        /* Summary Area */
         .summary-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
         .summary-list { list-style: none; margin-bottom: 8px; font-size: 13px; color: #555; text-align: left; padding-left: 5px; }
         .summary-list li { margin-bottom: 4px; display: flex; justify-content: space-between; }
 
-        /* CBE Birr Modal Simulation Popups */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
         .modal.active { display: flex; }
         .modal-content { background: white; width: 90%; max-width: 350px; padding: 25px; border-radius: 15px; text-align: center; }
         .cbe-header { background: #4a148c; color: white; padding: 10px; margin: -25px -25px 20px -25px; border-top-left-radius: 15px; border-top-right-radius: 15px; font-weight: bold; }
 
-        /* Custom App Footer Branding */
         .app-footer { text-align: center; padding: 15px 10px; margin-top: 20px; color: #777; font-size: 11px; line-height: 1.6; border-top: 1px dashed #ccc; }
 
-        /* Fixed Navigation Menu Footer bar */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #ddd; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .bottom-nav a { text-decoration: none; color: #666; font-weight: bold; font-size: 13px; cursor: pointer; }
         .bottom-nav a.active { color: #1565c0; }
@@ -61,7 +53,6 @@
 </head>
 <body>
 
-    <!-- SCREEN 1: LOGIN -->
     <div id="loginScreen" class="screen active">
         <div class="auth-container">
             <h2>UMC Choir Login</h2>
@@ -83,7 +74,6 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: SIGNUP -->
     <div id="signupScreen" class="screen">
         <div class="auth-container">
             <h2>Choir Registration</h2>
@@ -117,7 +107,6 @@
         </div>
     </div>
 
-    <!-- SCREEN 3: HOME LAYOUT -->
     <div id="homeScreen" class="screen">
         <div class="user-banner">
             <img id="userDisplayAvatar" class="user-avatar" src="" alt="Avatar">
@@ -178,7 +167,6 @@
         </div>
     </div>
 
-    <!-- ONLINE CBE BIRR GATEWAY DIALOG MODAL SIMULATION -->
     <div id="cbeModal" class="modal">
         <div class="modal-content">
             <div class="cbe-header">CBE Birr Online Checkout</div>
@@ -195,14 +183,15 @@
         </div>
     </div>
 
-    <!-- PERSISTENT FOOTER BAR MENU CONTAINER -->
     <div id="globalNavbar" class="bottom-nav hidden">
         <a id="navHome" onclick="switchScreen('homeScreen')">🏠 Home</a>
         <a id="navLogout" onclick="switchScreen('loginScreen')">👤 Logout</a>
     </div>
 
     <script>
-        // Utilizing relative route links directly makes deployment plug-and-play across any domain
+        // FIXED: Absolute production URL mapping allows accurate calls from external iframe environments
+        const BACKEND_URL = "https://maranatha-choir.onrender.com"; 
+        
         const tg = window.Telegram?.WebApp;
         if(tg) tg.ready();
 
@@ -236,7 +225,7 @@
             if(!avatar) avatar = "https://www.w3schools.com/howto/img_avatar.png";
 
             try {
-                const response = await fetch(`/api/signup`, {
+                const response = await fetch(`${BACKEND_URL}/api/signup`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, phone, choir, password, avatar })
@@ -251,7 +240,7 @@
                     alert(result.message);
                 }
             } catch (err) {
-                alert("Database Connection Error. Endpoint requested could not reach server.");
+                alert("Database Connection Error. Ensure your backend server is online.");
             }
         }
 
@@ -265,7 +254,7 @@
             }
 
             try {
-                const response = await fetch(`/api/login`, {
+                const response = await fetch(`${BACKEND_URL}/api/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, password })
@@ -280,7 +269,7 @@
                     alert(result.message);
                 }
             } catch (err) {
-                alert("Database Connection Error. Endpoint requested could not reach server.");
+                alert("Database Connection Error. Ensure your backend server is online.");
             }
         }
 
@@ -364,7 +353,7 @@
                 closeCBEGateway();
                 tg.close();
             } else {
-                alert(`🎉 Payment Successful!\nAmount: ${totalAmount} ETB has been transferred to account 10005246***** successfully.`);
+                alert(`🎉 Payment Successful!\nAmount: ${totalAmount} ETB has been transferred successfully.`);
                 closeCBEGateway();
             }
         }

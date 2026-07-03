@@ -2,9 +2,9 @@ import os
 import json
 import logging
 import asyncio
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -16,48 +16,43 @@ OWNER_CHAT_ID = int(os.environ.get("OWNER_CHAT_ID", 998942116))
 DB_FILE = "umc_database.json"
 WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
 
-flask_app = Flask(__name__, static_folder=".")
-CORS(flask_app, resources={r"/api/*": {"origins": "*"}})
+flask_app = Flask(__name__)
+CORS(flask_app)
 
+# Build the bot application instance globally
 telegram_app = Application.builder().token(BOT_TOKEN).build()
-bot_loop = asyncio.new_event_loop()
 
-# --- Database Storage Engines ---
 def load_db():
-    if not os.path.exists(DB_FILE): 
-        return {"users": {}}
+    if not os.path.exists(DB_FILE): return {"users": {}}
     try:
-        with open(DB_FILE, "r") as f: 
-            return json.load(f)
-    except Exception: 
-        return {"users": {}}
+        with open(DB_FILE, "r") as f: return json.load(f)
+    except Exception: return {"users": {}}
 
 def save_db(data):
     try:
-        with open(DB_FILE, "w") as f: 
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        logger.error(f"Error writing to local profile storage: {str(e)}")
+        with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
+    except Exception as e: logger.error(f"Error saving database: {e}")
 
-# --- Bot Command Flow Commands ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    keyboard = [[InlineKeyboardButton("🎵 Open UMC Wallet", web_app=WebAppInfo(url=WEBAPP_URL))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    logger.info(f"Start command triggered by user: {update.effective_user.id}")
+    
+    # Using ReplyKeyboardMarkup so tg.sendData() is authorized to transmit packets
+    keyboard = [[KeyboardButton(text="🎵 Open UMC Wallet", web_app=WebAppInfo(url=WEBAPP_URL))]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+    
     await update.message.reply_text(
         f"Welcome {update.effective_user.first_name} to the Union of Maranatha Choir Portal!\n\n"
-        "Click the button below to register/sign-in directly inside the app, manage accounts, and post financial validations.",
+        "Look at the bottom of your screen! Click the large 🎵 **Open UMC Wallet** menu button to begin your registration and donation allocations.",
         reply_markup=reply_markup
     )
 
-# 1. Capture payload strings pushed out from user click inside verifyCBEPaymentOnline()
 async def process_incoming_mini_app_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         raw_json = update.message.web_app_data.data
         payload = json.loads(raw_json)
-        
-        tg_username = f"@{update.effective_user.username}" if update.effective_user.username else "No Username Provided"
+        tg_username = f"@{update.effective_user.username}" if update.effective_user.username else "No Username"
 
-        # 2. Build explicit visual template layout alert text block for Admin review channels
+        # 1. Prepare visual layout text block alert for Admin review channels
         admin_alert_message = (
             "🚨 **NEW PAYMENT SUBMISSION RECEIVED** 🚨\n\n"
             "👤 **MEMBER PROFILE:**\n"
@@ -72,49 +67,41 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             f"🆔 **CBE Transaction Reference ID:** {payload.get('txn_id')}\n"
         )
 
-        # 3. Deliver text package cleanly to your ADMIN_ID chat inbox
+        # 2. Deliver text package cleanly to your ADMIN_ID chat inbox
         await context.bot.send_message(chat_id=OWNER_CHAT_ID, text=admin_alert_message, parse_mode="Markdown")
         
-        # 4. Notify member in private context chat of transaction routing state
-        await update.message.reply_text(
-            "🎉 **Submission Confirmed!** Your member metrics and payment transaction details have been forwarded to the admin registry dashboard for review. Thank you!"
+        # 3. Deliver clear success message back to the individual USER who just paid
+        user_confirmation = (
+            "✅ **UMC Wallet Submission Successful!**\n\n"
+            f"Thank you, **{payload.get('member_name')}**!\n"
+            f"Your contribution of **{payload.get('total_amount')} ETB** (Ref: `{payload.get('txn_id')}`) "
+            "has been securely sent to our admin review panel. We will verify your transaction shortly. 🙏"
         )
+        await update.message.reply_text(text=user_confirmation, parse_mode="Markdown")
 
     except Exception as e:
-        logger.error(f"Error parsing webapp payload strings: {str(e)}")
-        await update.message.reply_text("Error parsing incoming app data payload values.")
+        logger.error(f"Error parsing webapp data: {e}")
+        await update.message.reply_text("⚠️ System parsing error mapping payload values.")
 
-# Wire structural app framework updates
+# Register Telegram handlers
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
 
-bot_loop.run_until_complete(telegram_app.initialize())
-
-# --- Flask Web Server API Endpoints ---
+# --- Flask Server Routing Setup ---
 
 @flask_app.route('/')
 def serve_index(): 
-    return "UMC Core Engine Running Stable with API Registry Services Operational. 🚀", 200
+    return "UMC Engine Online 🚀", 200
 
 @flask_app.route('/api/signup', methods=['POST'])
 def api_signup():
     data = request.json or {}
     db = load_db()
     name = data.get("name", "").strip()
+    if not name or name in db["users"]: 
+        return jsonify({"status": "error", "message": "Invalid name or account already exists!"})
     
-    if not name: 
-        return jsonify({"status": "error", "message": "Full Name field cannot be left blank!"})
-    if name in db["users"]: 
-        return jsonify({"status": "error", "message": "This account name is already registered in our database!"})
-    
-    user_record = {
-        "name": name, 
-        "phone": data.get("phone"), 
-        "choir": data.get("choir"),
-        "password": data.get("password"), 
-        "avatar": data.get("avatar")
-    }
-    
+    user_record = {"name": name, "phone": data.get("phone"), "choir": data.get("choir"), "password": data.get("password"), "avatar": data.get("avatar")}
     db["users"][name] = user_record
     save_db(db)
     return jsonify({"status": "success", "user": user_record})
@@ -125,32 +112,38 @@ def api_login():
     db = load_db()
     name = data.get("name", "").strip()
     password = data.get("password", "").strip()
-    
     if name not in db["users"] or db["users"][name]["password"] != password:
-        return jsonify({"status": "error", "message": "Invalid Name or Password matching credentials!"})
-        
+        return jsonify({"status": "error", "message": "Invalid Credentials!"})
     return jsonify({"status": "success", "user": db["users"][name]})
 
 @flask_app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = Update.de_json(json.loads(json_string), telegram_app.bot)
+    """Thread-safe event processing loop worker"""
+    try:
+        update_data = request.get_json(force=True)
         
-        try:
-            bot_loop.run_until_complete(telegram_app.process_update(update))
-            return 'OK', 200
-        except Exception as err:
-            logger.error(f"Webhook process runtime error tracking: {str(err)}")
-            return 'Internal Webhook Error', 500
-            
-    return 'Forbidden', 403
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        update = Update.de_json(update_data, telegram_app.bot)
+        loop.run_until_complete(telegram_app.initialize())
+        loop.run_until_complete(telegram_app.process_update(update))
+        loop.close()
+        
+        return 'OK', 200
+    except Exception as err:
+        logger.error(f"Webhook tracking error: {err}")
+        return 'Internal Error', 500
 
 @flask_app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
     public_url = request.args.get('url') or f"https://{request.host}/telegram-webhook"
     try:
-        success = bot_loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(telegram_app.initialize())
+        success = loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
+        loop.close()
         if success:
             return jsonify({"status": "success", "message": f"Webhook linked securely to {public_url}"})
         return jsonify({"status": "failed"}), 500

@@ -3,25 +3,20 @@ import json
 import logging
 import asyncio
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # Fixed missing import bug
+from flask_cors import CORS
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-# Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Credentials & Configurations
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8882818453:AAGHmZ6ryquopL-IKgh3kCdna70SoxDjmWc")
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "998942116")
 DB_FILE = "umc_database.json"
 
-# Initialize Flask App & Enable CORS
 flask_app = Flask(__name__, static_folder=".")
 CORS(flask_app)
 
-# Initialize Telegram Application globally (without starting polling)
-# We handle the event updates manually via webhook route
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
 def load_db():
@@ -40,6 +35,8 @@ def save_db(data):
 # --- Telegram Bot Handler Logic ---
 
 async def start(update: Update, context) -> None:
+    # Telegram webapps need a clean public entry domain address to hit the Flask UI
+    # Replace this string with your production Render or PythonAnywhere URL
     mini_app_url = "https://maranatha-choir.onrender.com" 
     keyboard = [
         [InlineKeyboardButton("🎵 Open UMC Wallet", web_app=WebAppInfo(url=mini_app_url))]
@@ -92,10 +89,8 @@ async def process_incoming_mini_app_payment(update: Update, context) -> None:
         logger.error(f"Error parsing checkout payload: {str(e)}")
         await update.message.reply_text("Payment tracking confirmation error.")
 
-# Register Bot Handlers
 telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
-
+telegram_app.add_handler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment)
 
 # --- Flask Web Routes ---
 
@@ -143,17 +138,32 @@ def api_login():
     
     return jsonify({"status": "success", "user": db["users"][name]})
 
-# --- WEBHOOK ENDPOINT FOR TELEGRAM ---
+# --- SAFELY MANAGED WEBHOOK LOOP FOR BOTH ENVIRONMENT LAYOUTS ---
 @flask_app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
-    """Receives system update requests safely sent from Telegram servers."""
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = Update.de_json(json.loads(json_string), telegram_app.bot)
         
-        # Run the update parser via asyncio loop context securely
-        asyncio.run(telegram_app.initialize())
-        asyncio.run(telegram_app.process_update(update))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Executed smoothly within WSGI servers (like PythonAnywhere)
+            future = asyncio.run_coroutine_threadsafe(telegram_app.initialize(), loop)
+            future.result()
+            future2 = asyncio.run_coroutine_threadsafe(telegram_app.process_update(update), loop)
+            future2.result()
+        else:
+            # Executed smoothly within standard environments (like Render)
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            new_loop.run_until_complete(telegram_app.initialize())
+            new_loop.run_until_complete(telegram_app.process_update(update))
+            new_loop.close()
+            
         return 'OK', 200
     return 'Forbidden', 403
 

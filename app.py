@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8820217071:AAGltetsRpmnq4OG_osBdHH5pcvL0EJNdG4")
 OWNER_CHAT_ID = int(os.environ.get("OWNER_CHAT_ID", 998942116))
 DB_FILE = "umc_database.json"
-WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart01/"
+WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
 
 flask_app = Flask(__name__, static_folder=".")
 CORS(flask_app, resources={r"/api/*": {"origins": "*"}})

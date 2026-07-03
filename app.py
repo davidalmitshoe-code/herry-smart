@@ -40,7 +40,7 @@ def save_db(data):
 # --- Telegram Bot Handler Logic ---
 
 async def start(update: Update, context) -> None:
-    mini_app_url = "https://davidalmitshoe-code.github.io/herry-smart/" 
+    mini_app_url = "https://maranatha-choir.onrender.com" 
     keyboard = [
         [InlineKeyboardButton("🎵 Open UMC Wallet", web_app=WebAppInfo(url=mini_app_url))]
     ]

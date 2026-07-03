@@ -7,6 +7,7 @@ from flask_cors import CORS
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
+# Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,9 @@ OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "998942116")
 DB_FILE = "umc_database.json"
 
 flask_app = Flask(__name__, static_folder=".")
-CORS(flask_app)
+
+# Allow CORS explicitly for all origins so GitHub Pages can connect securely
+CORS(flask_app, resources={r"/api/*": {"origins": "*"}})
 
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
@@ -35,8 +38,7 @@ def save_db(data):
 # --- Telegram Bot Handler Logic ---
 
 async def start(update: Update, context) -> None:
-    # Telegram webapps need a clean public entry domain address to hit the Flask UI
-    # Replace this string with your production Render or PythonAnywhere URL
+    # Update this with your live Render URL
     mini_app_url = "https://maranatha-choir.onrender.com" 
     keyboard = [
         [InlineKeyboardButton("🎵 Open UMC Wallet", web_app=WebAppInfo(url=mini_app_url))]
@@ -89,8 +91,9 @@ async def process_incoming_mini_app_payment(update: Update, context) -> None:
         logger.error(f"Error parsing checkout payload: {str(e)}")
         await update.message.reply_text("Payment tracking confirmation error.")
 
+# FIXED: Wrapped filters inside MessageHandler properly to stop Gunicorn from crashing
 telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment)
+telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
 
 # --- Flask Web Routes ---
 
@@ -138,7 +141,6 @@ def api_login():
     
     return jsonify({"status": "success", "user": db["users"][name]})
 
-# --- SAFELY MANAGED WEBHOOK LOOP FOR BOTH ENVIRONMENT LAYOUTS ---
 @flask_app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     if request.headers.get('content-type') == 'application/json':
@@ -151,13 +153,11 @@ def telegram_webhook():
             loop = None
 
         if loop and loop.is_running():
-            # Executed smoothly within WSGI servers (like PythonAnywhere)
             future = asyncio.run_coroutine_threadsafe(telegram_app.initialize(), loop)
             future.result()
             future2 = asyncio.run_coroutine_threadsafe(telegram_app.process_update(update), loop)
             future2.result()
         else:
-            # Executed smoothly within standard environments (like Render)
             new_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(new_loop)
             new_loop.run_until_complete(telegram_app.initialize())

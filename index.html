@@ -67,10 +67,8 @@
             <button class="btn" onclick="handleLoginSubmit()">Sign In</button>
             <p class="toggle-auth" onclick="switchScreen('signupScreen')">New member? Register here</p>
         </div>
-        
         <div class="app-footer">
             <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
-            <p>Powered by Etydavid Software Solutions</p>
         </div>
     </div>
 
@@ -95,15 +93,10 @@
             </div>
             <div class="form-group">
                 <label>Profile Image URL</label>
-                <input type="text" id="signUpAvatar" placeholder="Paste image address link">
+                <input type="text" id="signUpAvatar" placeholder="Optional image link">
             </div>
             <button class="btn" onclick="handleSignUpSubmit()">Create Account</button>
             <p class="toggle-auth" onclick="switchScreen('loginScreen')">Already have an account? Sign In</p>
-        </div>
-
-        <div class="app-footer">
-            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
-            <p>Powered by Etydavid Software Solutions</p>
         </div>
     </div>
 
@@ -158,27 +151,22 @@
         </div>
 
         <button class="btn" style="background:#2e7d32;" onclick="openCBEBirrGateway()">
-            ⚡ Pay Now via CBE Birr
+            ⚡ Confirm & Submit Receipt
         </button>
-
-        <div class="app-footer">
-            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
-            <p>Powered by Etydavid Software Solutions</p>
-        </div>
     </div>
 
     <div id="cbeModal" class="modal">
         <div class="modal-content">
-            <div class="cbe-header">CBE Birr Online Checkout</div>
-            <p style="font-size: 12px; margin-bottom: 10px; color: #555;">Target Merchant Account:<br><strong>10005246*****</strong></p>
+            <div class="cbe-header">CBE Birr Manual Checkout</div>
+            <p style="font-size: 13px; margin-bottom: 12px; color: #333;">Please transfer funds to this account:<br><strong style="font-size:16px; color:#4a148c;">1004747.....</strong></p>
             <h3 style="margin-bottom: 15px; color:#2e7d32;">Amount: <span id="modalPaymentAmount">0</span> ETB</h3>
             
             <div class="form-group">
-                <label style="font-size:12px;">Enter CBE Birr PIN / Password</label>
-                <input type="password" id="cbePassword" placeholder="••••" style="text-align:center; font-size:18px; letter-spacing:5px;" maxlength="6">
+                <label style="font-size:12px;">Transaction ID / Reference Note</label>
+                <input type="text" id="cbeTxnId" placeholder="e.g. FT26..." style="text-align:center;">
             </div>
             
-            <button class="btn" style="background:#4a148c;" onclick="verifyCBEPaymentOnline()">Verify & Confirm Payment</button>
+            <button class="btn" style="background:#4a148c;" onclick="verifyCBEPaymentOnline()">Confirm Details</button>
             <button class="btn" style="background:#757575; margin-top:5px;" onclick="closeCBEGateway()">Cancel</button>
         </div>
     </div>
@@ -189,9 +177,7 @@
     </div>
 
     <script>
-        // FIXED: Absolute production URL mapping allows accurate calls from external iframe environments
         const BACKEND_URL = "https://maranatha-choir.onrender.com"; 
-        
         const tg = window.Telegram?.WebApp;
         if(tg) tg.ready();
 
@@ -231,7 +217,6 @@
                     body: JSON.stringify({ name, phone, choir, password, avatar })
                 });
                 const result = await response.json();
-
                 if(result.status === "success") {
                     activeUser = result.user;
                     populateUserProfile();
@@ -239,19 +224,13 @@
                 } else {
                     alert(result.message);
                 }
-            } catch (err) {
-                alert("Database Connection Error. Ensure your backend server is online.");
-            }
+            } catch (err) { alert("Database Connection Error."); }
         }
 
         async function handleLoginSubmit() {
             const name = document.getElementById("loginName").value.trim();
             const password = document.getElementById("loginPassword").value.trim();
-
-            if(!name || !password) {
-                alert("Please fill out all fields!");
-                return;
-            }
+            if(!name || !password) { alert("Please fill out all fields!"); return; }
 
             try {
                 const response = await fetch(`${BACKEND_URL}/api/login`, {
@@ -260,17 +239,12 @@
                     body: JSON.stringify({ name, password })
                 });
                 const result = await response.json();
-
                 if(result.status === "success") {
                     activeUser = result.user;
                     populateUserProfile();
                     switchScreen('homeScreen');
-                } else {
-                    alert(result.message);
-                }
-            } catch (err) {
-                alert("Database Connection Error. Ensure your backend server is online.");
-            }
+                } else { alert(result.message); }
+            } catch (err) { alert("Database Connection Error."); }
         }
 
         function populateUserProfile() {
@@ -295,13 +269,11 @@
         function renderSummary() {
             const listContainer = document.getElementById("selectedItemsList");
             const totalDisplay = document.getElementById("checkoutTotalAmount");
-            
             if(selectedItems.length === 0) {
                 listContainer.innerHTML = '<li style="color: #999;">No items selected</li>';
                 totalDisplay.innerText = "0";
                 return;
             }
-
             listContainer.innerHTML = "";
             let total = 0;
             selectedItems.forEach(item => {
@@ -314,10 +286,7 @@
         }
 
         function openCBEBirrGateway() {
-            if(selectedItems.length === 0) {
-                alert("Please pick at least one item rail option!");
-                return;
-            }
+            if(selectedItems.length === 0) { alert("Please pick at least one item rail option!"); return; }
             const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
             document.getElementById("modalPaymentAmount").innerText = totalAmount;
             document.getElementById("cbeModal").classList.add("active");
@@ -325,15 +294,12 @@
 
         function closeCBEGateway() {
             document.getElementById("cbeModal").classList.remove("active");
-            document.getElementById("cbePassword").value = "";
+            document.getElementById("cbeTxnId").value = "";
         }
 
         function verifyCBEPaymentOnline() {
-            const pin = document.getElementById("cbePassword").value.trim();
-            if(pin.length < 4) {
-                alert("Please enter your secure CBE Birr PIN password!");
-                return;
-            }
+            const txnId = document.getElementById("cbeTxnId").value.trim();
+            if(!txnId) { alert("Please enter the transaction ID or reference reference description!"); return; }
 
             const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
             const itemsString = selectedItems.map(i => `${i.title} (${i.amount} ETB)`).join(", ");
@@ -341,11 +307,11 @@
             const dataPayload = {
                 member_name: activeUser.name,
                 member_phone: activeUser.phone,
-                member_avatar: activeUser.avatar,
+                member_choir: activeUser.choir,
                 selected_items: itemsString,
                 total_amount: totalAmount,
-                target_merchant_account: "10005246*****",
-                payment_status: "SUCCESSFULLY_PAID"
+                txn_id: txnId,
+                target_account: "1004747....."
             };
 
             if(tg && typeof tg.sendData === 'function') {
@@ -353,8 +319,7 @@
                 closeCBEGateway();
                 tg.close();
             } else {
-                alert(`🎉 Payment Successful!\nAmount: ${totalAmount} ETB has been transferred successfully.`);
-                closeCBEGateway();
+                alert("Please open this layout directly inside your Telegram Bot Mini App.");
             }
         }
     </script>

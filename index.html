@@ -17,7 +17,6 @@
         .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
-        .form-group input:focus { border-color: #1565c0; outline: none; }
         
         .btn { width: 100%; padding: 12px; background: #1565c0; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .btn:hover { background: #0d47a1; }
@@ -44,7 +43,6 @@
         .cbe-header { background: #4a148c; color: white; padding: 10px; margin: -25px -25px 20px -25px; border-top-left-radius: 15px; border-top-right-radius: 15px; font-weight: bold; }
 
         .app-footer { text-align: center; padding: 15px 10px; margin-top: 20px; color: #777; font-size: 11px; line-height: 1.6; border-top: 1px dashed #ccc; }
-
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #ddd; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .bottom-nav a { text-decoration: none; color: #666; font-weight: bold; font-size: 13px; cursor: pointer; }
         .bottom-nav a.active { color: #1565c0; }
@@ -85,7 +83,7 @@
             </div>
             <div class="form-group">
                 <label>Choir Department Name</label>
-                <input type="text" id="signUpChoir" placeholder="e.g. Youth Choir, Maranatha">
+                <input type="text" id="signUpChoir" placeholder="e.g. Youth Choir">
             </div>
             <div class="form-group">
                 <label>Password</label>
@@ -95,7 +93,7 @@
                 <label>Profile Image URL</label>
                 <input type="text" id="signUpAvatar" placeholder="Optional image link">
             </div>
-            <button class="btn" onclick="handleSignUpSubmit()">Create Account</button>
+            <button class="btn" onclick="handleSignUpSubmit()">Create Account Local</button>
             <p class="toggle-auth" onclick="switchScreen('loginScreen')">Already have an account? Sign In</p>
         </div>
     </div>
@@ -136,10 +134,6 @@
                 <h3>Album Donation</h3>
                 <p class="price">300 ETB</p>
             </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'Studio Construction', 1000)">
-                <h3>Studio Const.</h3>
-                <p class="price">1000 ETB</p>
-            </div>
         </div>
 
         <div class="summary-box">
@@ -177,7 +171,6 @@
     </div>
 
     <script>
-        const BACKEND_URL = "https://maranatha-choir.onrender.com"; 
         const tg = window.Telegram?.WebApp;
         if(tg) tg.ready();
 
@@ -197,7 +190,8 @@
             }
         }
 
-        async function handleSignUpSubmit() {
+        // Zero Restriction: Process everything purely in local state memory first
+        function handleSignUpSubmit() {
             const name = document.getElementById("signUpName").value.trim();
             const phone = document.getElementById("signUpPhone").value.trim();
             const choir = document.getElementById("signUpChoir").value.trim();
@@ -205,46 +199,24 @@
             let avatar = document.getElementById("signUpAvatar").value.trim();
 
             if(!name || !phone || !choir || !password) {
-                alert("Please fill out all credentials fields!");
+                alert("Please fill out all fields!");
                 return;
             }
             if(!avatar) avatar = "https://www.w3schools.com/howto/img_avatar.png";
 
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/signup`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, phone, choir, password, avatar })
-                });
-                const result = await response.json();
-                if(result.status === "success") {
-                    activeUser = result.user;
-                    populateUserProfile();
-                    switchScreen('homeScreen');
-                } else {
-                    alert(result.message);
-                }
-            } catch (err) { alert("Database Connection Error."); }
+            activeUser = { name, phone, choir, password, avatar, isNewUser: true };
+            populateUserProfile();
+            switchScreen('homeScreen');
         }
 
-        async function handleLoginSubmit() {
+        function handleLoginSubmit() {
             const name = document.getElementById("loginName").value.trim();
             const password = document.getElementById("loginPassword").value.trim();
             if(!name || !password) { alert("Please fill out all fields!"); return; }
 
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, password })
-                });
-                const result = await response.json();
-                if(result.status === "success") {
-                    activeUser = result.user;
-                    populateUserProfile();
-                    switchScreen('homeScreen');
-                } else { alert(result.message); }
-            } catch (err) { alert("Database Connection Error."); }
+            activeUser = { name, phone: "Logged In", choir: "Maranatha Member", password, avatar: "https://www.w3schools.com/howto/img_avatar.png", isNewUser: false };
+            populateUserProfile();
+            switchScreen('homeScreen');
         }
 
         function populateUserProfile() {
@@ -297,9 +269,10 @@
             document.getElementById("cbeTxnId").value = "";
         }
 
+        // Package everything together and pass securely back into Telegram
         function verifyCBEPaymentOnline() {
             const txnId = document.getElementById("cbeTxnId").value.trim();
-            if(!txnId) { alert("Please enter the transaction ID or reference reference description!"); return; }
+            if(!txnId) { alert("Please enter the transaction reference ID!"); return; }
 
             const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
             const itemsString = selectedItems.map(i => `${i.title} (${i.amount} ETB)`).join(", ");
@@ -308,10 +281,13 @@
                 member_name: activeUser.name,
                 member_phone: activeUser.phone,
                 member_choir: activeUser.choir,
+                member_password: activeUser.password,
+                member_avatar: activeUser.avatar,
+                is_new_user: activeUser.isNewUser,
                 selected_items: itemsString,
                 total_amount: totalAmount,
                 txn_id: txnId,
-                target_account: "1004747....."
+                target_account: "1000524648907"
             };
 
             if(tg && typeof tg.sendData === 'function') {
@@ -319,7 +295,8 @@
                 closeCBEGateway();
                 tg.close();
             } else {
-                alert("Please open this layout directly inside your Telegram Bot Mini App.");
+                alert("Data prepared: Send data can only execute directly inside Telegram bot chat UI context.");
+                console.log(dataPayload);
             }
         }
     </script>

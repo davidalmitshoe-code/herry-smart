@@ -1,415 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UMC Choir Wallet</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-        body { background: #f4f6f9; color: #333; padding-bottom: 120px; font-size: 14px; }
+import os
+import json
+import logging
+import asyncio
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# CONFIGURATION DEFINITIONS
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8820217071:AAGltetsRpmnq4OG_osBdHH5pcvL0EJNdG4")
+OWNER_CHAT_ID = int(os.environ.get("OWNER_CHAT_ID", 998942116))
+DB_FILE = "umc_database.json"
+WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
+
+flask_app = Flask(__name__)
+CORS(flask_app)
+
+# Initialize the master app context safely
+telegram_app = Application.builder().token(BOT_TOKEN).build()
+
+# Create a single global background event loop to fix the speed latency drop
+bot_loop = asyncio.new_event_loop()
+
+def load_db():
+    if not os.path.exists(DB_FILE): return {"users": {}}
+    try:
+        with open(DB_FILE, "r") as f: return json.load(f)
+    except Exception: return {"users": {}}
+
+def save_db(data):
+    try:
+        with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
+    except Exception as e: logger.error(f"Error saving database: {e}")
+
+# --- Core Bot Execution Handlers ---
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"Start command triggered by user: {update.effective_user.id}")
+    keyboard = [[KeyboardButton(text="🎵 Open UMC Wallet", web_app=WebAppInfo(url=WEBAPP_URL))]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+    
+    await update.message.reply_text(
+        f"Welcome {update.effective_user.first_name} to the Union of Maranatha Choir Portal!\n\n"
+        "Click the large 🎵 **Open UMC Wallet** button below to open your account profile and complete payments.",
+        reply_markup=reply_markup
+    )
+
+async def process_incoming_mini_app_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        # SAFE EXTRACT PATTERN: Safely catch data packet from either message format location
+        raw_json = None
+        if update.message and update.message.web_app_data:
+            raw_json = update.message.web_app_data.data
+        elif update.effective_message and update.effective_message.web_app_data:
+            raw_json = update.effective_message.web_app_data.data
+
+        if not raw_json:
+            logger.warning("Empty packet received.")
+            return
+
+        payload = json.loads(raw_json)
+        tg_username = f"@{update.effective_user.username}" if update.effective_user.username else "No Username"
+
+        name = payload.get('member_name', '').strip()
+        is_new = payload.get('is_new_user', False)
+
+        if is_new and name:
+            db = load_db()
+            db["users"][name] = {
+                "name": name,
+                "phone": payload.get('member_phone'),
+                "choir": payload.get('member_choir'),
+                "password": payload.get('member_password'),
+                "avatar": payload.get('member_avatar')
+            }
+            save_db(db)
+            logger.info(f"Successfully registered new user inside database file: {name}")
+
+        admin_alert_message = (
+            "🚨 **NEW SYSTEM ACTION SUBMISSION** 🚨\n\n"
+            "👤 **MEMBER PROFILE:**\n"
+            f"▪️ Name: {name}\n"
+            f"▪️ Phone Number: {payload.get('member_phone')}\n"
+            f"▪️ Choir Dept: {payload.get('member_choir')}\n"
+            f"▪️ Account Action: {'New Registration + Payment' if is_new else 'Sign In Checkout'}\n"
+            f"▪️ Telegram Handle: {tg_username}\n\n"
+            "📋 **TRANSACTION ALLOCATIONS:**\n"
+            f"  {payload.get('selected_items')}\n\n"
+            f"💵 **Total Amount:** {payload.get('total_amount')} ETB\n"
+            f"🏦 **Paid To Account:** {payload.get('target_account')}\n"
+            f"🆔 **CBE Transaction Reference ID:** {payload.get('txn_id')}\n"
+        )
+
+        await context.bot.send_message(chat_id=OWNER_CHAT_ID, text=admin_alert_message, parse_mode="Markdown")
         
-        /* Language and Header bar Utilities */
-        .top-utility-bar { background: #1565c0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; }
-        .lang-selector select { padding: 5px 10px; border-radius: 5px; border: none; font-weight: bold; background: white; color: #1565c0; cursor: pointer; }
+        user_confirmation = (
+            "✅ **UMC Wallet Submission Successful!**\n\n"
+            f"Thank you, **{name}**!\n"
+            f"Your submission totaling **{payload.get('total_amount')} ETB** (Ref: `{payload.get('txn_id')}`) "
+            "has been recorded successfully. Our admin team will verify it shortly. 🙏"
+        )
+        await update.message.reply_text(text=user_confirmation, parse_mode="Markdown")
 
-        .screen { display: none; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
-        .screen.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    except Exception as e:
+        logger.error(f"Error mapping payload attributes: {e}")
+        if update.message:
+            await update.message.reply_text("⚠️ System parsing error handling data packets.")
 
-        .auth-container { max-width: 400px; margin: 20px auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
-        .auth-container h2 { color: #1565c0; margin-bottom: 20px; font-size: 22px; }
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
+
+# Initialize the engine layout context *once* globally inside the background loop thread
+bot_loop.run_until_complete(telegram_app.initialize())
+
+# --- Flask Server Architecture Routing ---
+
+@flask_app.route('/')
+def serve_index(): 
+    return "UMC Engine Online & Operational 🚀", 200
+
+@flask_app.route('/telegram-webhook', methods=['POST'])
+def telegram_webhook():
+    try:
+        update_data = request.get_json(force=True)
+        update = Update.de_json(update_data, telegram_app.bot)
         
-        .btn { width: 100%; padding: 12px; background: #1565c0; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn:hover { background: #0d47a1; }
-        .toggle-auth { margin-top: 15px; color: #1565c0; cursor: pointer; font-weight: 500; display: inline-block; }
+        # Route traffic inside the single global loop context instead of spawning new loops
+        bot_loop.run_until_complete(telegram_app.process_update(update))
+        return 'OK', 200
+    except Exception as err:
+        logger.error(f"Webhook tracking error: {err}")
+        return 'Internal Error', 500
 
-        .user-banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .user-avatar { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid #1565c0; }
-        .user-info h4 { color: #1565c0; font-size: 16px; }
+@flask_app.route('/set_webhook', methods=['GET', 'POST'])
+def set_webhook():
+    public_url = f"https://{request.host}/telegram-webhook"
+    try:
+        success = bot_loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
+        if success:
+            return jsonify({"status": "success", "message": f"Webhook linked to {public_url}"})
+        return jsonify({"status": "failed"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-        .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .payment-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 2px solid transparent; cursor: pointer; transition: 0.2s; text-align: center; position: relative; }
-        .payment-card h3 { font-size: 14px; margin-bottom: 6px; color: #333; }
-        .payment-card .price { font-size: 16px; font-weight: bold; color: #2e7d32; }
-        .payment-card.selected { border-color: #1565c0; background: #e3f2fd; }
-        .payment-card.selected::after { content: "✓"; position: absolute; top: 5px; right: 10px; color: #1565c0; font-weight: bold; font-size: 16px; }
-
-        .summary-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-        .summary-list { list-style: none; margin-bottom: 8px; font-size: 13px; color: #555; text-align: left; padding-left: 5px; }
-        .summary-list li { margin-bottom: 4px; display: flex; justify-content: space-between; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; padding: 10px; }
-        .modal.active { display: flex; }
-        .modal-content { background: white; width: 100%; max-width: 380px; padding: 25px; border-radius: 15px; text-align: center; max-height: 85vh; overflow-y: auto; }
-        .cbe-header { background: #4a148c; color: white; padding: 10px; margin: -25px -25px 20px -25px; border-top-left-radius: 15px; border-top-right-radius: 15px; font-weight: bold; }
-        
-        /* Contact List Styling */
-        .contact-item { text-align: left; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #1565c0; }
-        .contact-item p { margin-top: 2px; color: #666; }
-        .social-links { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
-        .social-links a { text-decoration: none; font-weight: bold; color: #0088cc; }
-
-        .app-footer { text-align: center; padding: 15px 10px; margin-top: 20px; color: #777; font-size: 11px; line-height: 1.6; border-top: 1px dashed #ccc; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #ddd; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .bottom-nav a { text-decoration: none; color: #666; font-weight: bold; font-size: 13px; cursor: pointer; }
-        .bottom-nav a.active { color: #1565c0; }
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body>
-
-    <div class="top-utility-bar">
-        <span style="font-weight: bold;">UMC Portal</span>
-        <div class="lang-selector">
-            <select id="langSelect" onchange="changeLanguage(this.value)">
-                <option value="en">English</option>
-                <option value="am">አማርኛ</option>
-            </select>
-        </div>
-    </div>
-
-    <div id="loginScreen" class="screen active">
-        <div class="auth-container">
-            <h2 id="text_loginTitle">UMC Choir Login</h2>
-            <div class="form-group">
-                <label id="text_loginLabelName">Full Name</label>
-                <input type="text" id="loginName" placeholder="Enter full name">
-            </div>
-            <div class="form-group">
-                <label id="text_loginLabelPass">Password</label>
-                <input type="password" id="loginPassword" placeholder="Enter password">
-            </div>
-            <button class="btn" id="text_btnSignIn" onclick="handleLoginSubmit()">Sign In</button>
-            <p class="toggle-auth" id="text_toRegister" onclick="switchScreen('signupScreen')">New member? Register here</p>
-        </div>
-        <div class="app-footer">
-            <p>© 2026 Union of Maranatha Choir. All Rights Reserved.</p>
-        </div>
-    </div>
-
-    <div id="signupScreen" class="screen">
-        <div class="auth-container">
-            <h2 id="text_registerTitle">Choir Registration</h2>
-            <div class="form-group">
-                <label id="text_regLabelName">Full Name</label>
-                <input type="text" id="signUpName" placeholder="Enter full name">
-            </div>
-            <div class="form-group">
-                <label id="text_regLabelPhone">Phone Number</label>
-                <input type="tel" id="signUpPhone" placeholder="+2519...">
-            </div>
-            <div class="form-group">
-                <label id="text_regLabelChoir">Choir Department Name</label>
-                <input type="text" id="signUpChoir" placeholder="e.g. Youth Choir">
-            </div>
-            <div class="form-group">
-                <label id="text_regLabelPass">Password</label>
-                <input type="password" id="signUpPassword" placeholder="Create password">
-            </div>
-            <div class="form-group">
-                <label id="text_regLabelAvatar">Profile Image URL</label>
-                <input type="text" id="signUpAvatar" placeholder="Optional image link">
-            </div>
-            <button class="btn" id="text_btnRegister" onclick="handleSignUpSubmit()">Create Account Local</button>
-            <p class="toggle-auth" id="text_toLogin" onclick="switchScreen('loginScreen')">Already have an account? Sign In</p>
-        </div>
-    </div>
-
-    <div id="homeScreen" class="screen">
-        <div class="user-banner">
-            <img id="userDisplayAvatar" class="user-avatar" src="" alt="Avatar">
-            <div class="user-info">
-                <h4 id="userDisplayName">User Account</h4>
-                <p id="userDisplayChoir">Choir Member</p>
-            </div>
-        </div>
-
-        <h2 id="text_selectContribution" style="margin-bottom: 15px; color: #1565c0;">Select Contribution Rails (Multiple)</h2>
-        
-        <div class="payment-grid">
-            <div class="payment-card" onclick="toggleSelection(this, 'Student Monthly', 25)">
-                <h3 class="item-title" data-en="Student Monthly" data-am="የተማሪ ወርሃዊ">Student Monthly</h3>
-                <p class="price">25 ETB</p>
-            </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'University Monthly', 50)">
-                <h3 class="item-title" data-en="University Monthly" data-am="የዩኒቨርሲቲ ወርሃዊ">Univ. Monthly</h3>
-                <p class="price">50 ETB</p>
-            </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'Worker Monthly', 100)">
-                <h3 class="item-title" data-en="Worker Monthly" data-am="የሰራተኛ ወርሃዊ">Worker Monthly</h3>
-                <p class="price">100 ETB</p>
-            </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'Pay Yearly', 500)">
-                <h3 class="item-title" data-en="Pay Yearly" data-am="የዓመት ክፍያ">Pay Yearly</h3>
-                <p class="price">500 ETB</p>
-            </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'Pay Membership', 150)">
-                <h3 class="item-title" data-en="Pay Membership" data-am="የአባልነት ክፍያ">Membership</h3>
-                <p class="price">150 ETB</p>
-            </div>
-            <div class="payment-card" onclick="toggleSelection(this, 'Donate for Album', 300)">
-                <h3 class="item-title" data-en="Donate for Album" data-am="ለአልበም መዋጮ">Album Donation</h3>
-                <p class="price">300 ETB</p>
-            </div>
-        </div>
-
-        <div class="summary-box">
-            <h4 id="text_selectedBreakdown" style="margin-bottom: 8px; color: #1565c0;">Selected Breakdown:</h4>
-            <ul id="selectedItemsList" class="summary-list">
-                <li style="color: #999;">No items selected</li>
-            </ul>
-            <h3 style="border-top: 1px solid #eee; padding-top: 8px; margin-top: 5px;"><span id="text_total">Total</span>: <span id="checkoutTotalAmount" style="color:#2e7d32;">0</span> ETB</h3>
-        </div>
-
-        <button class="btn" id="text_btnConfirmGateway" style="background:#2e7d32;" onclick="openCBEBirrGateway()">
-            ⚡ Confirm & Submit Receipt
-        </button>
-    </div>
-
-    <div id="cbeModal" class="modal">
-        <div class="modal-content">
-            <div class="cbe-header" id="text_cbeHeader">CBE Birr Manual Checkout</div>
-            <p id="text_cbeInstructions" style="font-size: 13px; margin-bottom: 12px; color: #333;">Please transfer funds to this account:<br><strong style="font-size:16px; color:#4a148c;">1000524648907</strong></p>
-            <h3><span id="text_amount">Amount</span>: <span id="modalPaymentAmount">0</span> ETB</h3>
-            
-            <div class="form-group">
-                <label style="font-size:12px;" id="text_txnLabel">Transaction ID / Reference Note</label>
-                <input type="text" id="cbeTxnId" placeholder="e.g. FT26..." style="text-align:center;">
-            </div>
-            
-            <button class="btn" style="background:#4a148c;" id="text_btnSubmitFinal" onclick="verifyCBEPaymentOnline()">Confirm Details</button>
-            <button class="btn" style="background:#757575; margin-top:5px;" id="text_btnCancel" onclick="closeCBEGateway()">Cancel</button>
-        </div>
-    </div>
-
-    <div id="contactModal" class="modal">
-        <div class="modal-content">
-            <div class="cbe-header" style="background:#1565c0;" id="text_contactHeader">UMC Official Directory</div>
-            
-            <div class="contact-item">
-                <strong id="label_founder">Founder & Director</strong>
-                <p>Pastor Abraham K. | 📞 +251911223344</p>
-            </div>
-            <div class="contact-item">
-                <strong id="label_officer">Main Officer</strong>
-                <p>Melaku T. | 📞 +251922556677</p>
-            </div>
-            <div class="contact-item">
-                <strong id="label_po1">Payment Office 1 (Finance)</strong>
-                <p>Sister Selamawit A. | 📞 +251933889900</p>
-            </div>
-            <div class="contact-item">
-                <strong id="label_po2">Payment Office 2 (Audits)</strong>
-                <p>Brother Dawit Y. | 📞 +251944112233</p>
-            </div>
-            <div class="contact-item" style="border-left-color: #2e7d32;">
-                <strong id="label_dev">System Developer</strong>
-                <p>EtyDavid Software Solution | 📞 +251922445514</p>
-            </div>
-
-            <h4 style="margin-top:15px; color:#1565c0;" id="text_socialTitle">Follow Our Social Media</h4>
-            <div class="social-links">
-                <a href="https://t.me/Maranatha_Choir" target="_blank">✈️ Telegram Channel</a>
-                <a href="https://youtube.com/@MaranathaChoir" target="_blank">📺 YouTube</a>
-            </div>
-
-            <button class="btn" style="background:#757575; margin-top:15px;" id="text_btnCloseContact" onclick="closeContactPage()">Close</button>
-        </div>
-    </div>
-
-    <div id="globalNavbar" class="bottom-nav hidden">
-        <a id="navHome" onclick="switchScreen('homeScreen')">🏠 Home</a>
-        <a id="navContact" onclick="openContactPage()">👤 Contact Directory</a>
-        <a id="navLogout" onclick="switchScreen('loginScreen')">🚪 Logout</a>
-    </div>
-
-    <script>
-        const tg = window.Telegram?.WebApp;
-        if(tg) tg.ready();
-
-        let selectedItems = [];
-        let activeUser = null;
-        let currentLang = "en";
-
-        // Structured Language Resource Bundles
-        const languages = {
-            en: {
-                text_loginTitle: "UMC Choir Login", text_loginLabelName: "Full Name", text_loginLabelPass: "Password", text_btnSignIn: "Sign In", text_toRegister: "New member? Register here",
-                text_registerTitle: "Choir Registration", text_regLabelName: "Full Name", text_regLabelPhone: "Phone Number", text_regLabelChoir: "Choir Department Name", text_regLabelPass: "Password", text_regLabelAvatar: "Profile Image URL", text_btnRegister: "Create Account Local", text_toLogin: "Already have an account? Sign In",
-                text_selectContribution: "Select Contribution Rails (Multiple)", text_selectedBreakdown: "Selected Breakdown:", text_total: "Total", text_btnConfirmGateway: "⚡ Confirm & Submit Receipt",
-                text_cbeHeader: "CBE Birr Manual Checkout", text_cbeInstructions: "Please transfer funds to this account:", text_amount: "Amount", text_txnLabel: "Transaction ID / Reference Note", text_btnSubmitFinal: "Confirm Details", text_btnCancel: "Cancel",
-                text_contactHeader: "UMC Official Directory", label_founder: "Founder & Director", label_officer: "Main Officer", label_po1: "Payment Office 1 (Finance)", label_po2: "Payment Office 2 (Audits)", label_po2: "Payment Office 2 (Audits)", label_dev: "System Developer", text_socialTitle: "Follow Our Social Media", text_btnCloseContact: "Close",
-                navHome: "🏠 Home", navContact: "👤 Contact Directory", navLogout: "🚪 Logout", no_items: "No items selected"
-            },
-            am: {
-                text_loginTitle: "የዩኤምሲ መዘምራን መግቢያ", text_loginLabelName: "ሙሉ ስም", text_loginLabelPass: "የይለፍ ቃል", text_btnSignIn: "ግባ", text_toRegister: "አዲስ አባል? እዚህ ይመዝገቡ",
-                text_registerTitle: "የመዘምራን ምዝገባ", text_regLabelName: "ሙሉ ስም", text_regLabelPhone: "ስልክ ቁጥር", text_regLabelChoir: "የክፍል ስም", text_regLabelPass: "የይለፍ ቃል", text_regLabelAvatar: "የፎቶ ሊንክ (አማራጭ)", text_btnRegister: "መለያ ፍጠር", text_toLogin: "ቀድሞውኑ መለያ አለዎት? ይግቡ",
-                text_selectContribution: "የመዋጮ ዓይነቶችን ይምረጡ (በርካታ መምረጥ ይቻላል)", text_selectedBreakdown: "የተመረጡ ክፍያዎች ዝርዝር:", text_total: "ጠቅላላ ድምር", text_btnConfirmGateway: "⚡ ክፍያን አረጋግጥና አስገባ",
-                text_cbeHeader: "በሲቢኢ ብር (CBE Birr) ማስተላለፊያ", text_cbeInstructions: "እባክዎን ወደዚህ አካውንት ገንዘብ ያስተላልፉ:", text_amount: "የገንዘብ መጠን", text_txnLabel: "የማስተላለፊያ መታወቂያ ቁጥር (Transaction ID)", text_btnSubmitFinal: "መረጃውን አረጋግጥ", text_btnCancel: "ሰርዝ",
-                text_contactHeader: "የዩኤምሲ ኦፊሴላዊ ማውጫ", label_founder: "መሥራች እና ዳይሬክተር", label_officer: "ዋና መኮንን", label_po1: "የክፍያ ቢሮ 1 (ፋይናንስ)", label_po2: "የክፍያ ቢሮ 2 (ኦዲት)", label_dev: "ሲስተም አልሚ", text_socialTitle: "ማህበራዊ ሚዲያችንን ይከተሉ", text_btnCloseContact: "ዝጋ",
-                navHome: "🏠 ዋና ገጽ", navContact: "👤 የእውቂያ ማውጫ", navLogout: "🚪 ውጣ", no_items: "ምንም የተመረጠ ነገር የለም"
-            }
-        };
-
-        function changeLanguage(lang) {
-            currentLang = lang;
-            Object.keys(languages[lang]).forEach(key => {
-                const element = document.getElementById(key);
-                if (element) element.innerText = languages[lang][key];
-            });
-            
-            // Updates card titles
-            document.querySelectorAll(".item-title").forEach(title => {
-                title.innerText = title.getAttribute(`data-${lang}`);
-            });
-            renderSummary();
-        }
-
-        function switchScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            const targetScreen = document.getElementById(screenId);
-            if(targetScreen) targetScreen.classList.add('active');
-
-            const navbar = document.getElementById("globalNavbar");
-            if(screenId === 'loginScreen' || screenId === 'signupScreen') {
-                navbar.classList.add('hidden');
-            } else {
-                navbar.classList.remove('hidden');
-            }
-        }
-
-        function openContactPage() { document.getElementById("contactModal").classList.add("active"); }
-        function closeContactPage() { document.getElementById("contactModal").classList.remove("active"); }
-
-        function handleSignUpSubmit() {
-            const name = document.getElementById("signUpName").value.trim();
-            const phone = document.getElementById("signUpPhone").value.trim();
-            const choir = document.getElementById("signUpChoir").value.trim();
-            const password = document.getElementById("signUpPassword").value.trim();
-            let avatar = document.getElementById("signUpAvatar").value.trim();
-
-            if(!name || !phone || !choir || !password) {
-                alert(currentLang === "am" ? "እባክዎን ሁሉንም ቦታዎች ይሙሉ!" : "Please fill out all fields!");
-                return;
-            }
-            if(!avatar) avatar = "https://www.w3schools.com/howto/img_avatar.png";
-
-            activeUser = { name, phone, choir, password, avatar, isNewUser: true };
-            populateUserProfile();
-            switchScreen('homeScreen');
-        }
-
-        function handleLoginSubmit() {
-            const name = document.getElementById("loginName").value.trim();
-            const password = document.getElementById("loginPassword").value.trim();
-            if(!name || !password) { 
-                alert(currentLang === "am" ? "እባክዎን ሁሉንም ቦታዎች ይሙሉ!" : "Please fill out all fields!"); 
-                return; 
-            }
-
-            activeUser = { name, phone: "Logged In", choir: "Maranatha Member", password, avatar: "https://www.w3schools.com/howto/img_avatar.png", isNewUser: false };
-            populateUserProfile();
-            switchScreen('homeScreen');
-        }
-
-        function populateUserProfile() {
-            if(!activeUser) return;
-            document.getElementById("userDisplayName").innerText = activeUser.name;
-            document.getElementById("userDisplayChoir").innerText = activeUser.choir + " | " + activeUser.phone;
-            document.getElementById("userDisplayAvatar").src = activeUser.avatar;
-        }
-
-        function toggleSelection(element, title, amount) {
-            const index = selectedItems.findIndex(item => item.title === title);
-            if (index > -1) {
-                selectedItems.splice(index, 1);
-                element.classList.remove('selected');
-            } else {
-                const cardTitleNode = element.querySelector('.item-title');
-                const localizedTitle = cardTitleNode ? cardTitleNode.innerText : title;
-                selectedItems.push({ title, localizedTitle, amount });
-                element.classList.add('selected');
-            }
-            renderSummary();
-        }
-
-        function renderSummary() {
-            const listContainer = document.getElementById("selectedItemsList");
-            const totalDisplay = document.getElementById("checkoutTotalAmount");
-            if(selectedItems.length === 0) {
-                listContainer.innerHTML = `<li style="color: #999;">${languages[currentLang].no_items}</li>`;
-                totalDisplay.innerText = "0";
-                return;
-            }
-            listContainer.innerHTML = "";
-            let total = 0;
-            selectedItems.forEach(item => {
-                total += item.amount;
-                const li = document.createElement("li");
-                // Get fresh language rendering for item view summaries
-                const currentCardTitle = document.querySelector(`.item-title[data-en="${item.title}"]`);
-                const dynamicTitleText = currentCardTitle ? currentCardTitle.innerText : item.title;
-                
-                li.innerHTML = `<span>${dynamicTitleText}</span> <strong>${item.amount} ETB</strong>`;
-                listContainer.appendChild(li);
-            });
-            totalDisplay.innerText = total;
-        }
-
-        function openCBEBirrGateway() {
-            if(selectedItems.length === 0) { 
-                alert(currentLang === "am" ? "እባክዎን ቢያንስ አንድ ክፍያ ይምረጡ!" : "Please pick at least one item rail option!"); 
-                return; 
-            }
-            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
-            document.getElementById("modalPaymentAmount").innerText = totalAmount;
-            document.getElementById("cbeModal").classList.add("active");
-        }
-
-        function closeCBEGateway() {
-            document.getElementById("cbeModal").classList.remove("active");
-            document.getElementById("cbeTxnId").value = "";
-        }
-
-        function verifyCBEPaymentOnline() {
-            const txnId = document.getElementById("cbeTxnId").value.trim();
-            if(!txnId) { 
-                alert(currentLang === "am" ? "እባክዎን የማስተላለፊያ ቁጥሩን ያስገቡ!" : "Please enter the transaction reference ID!"); 
-                return; 
-            }
-
-            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
-            const itemsString = selectedItems.map(i => {
-                const titleNode = document.querySelector(`.item-title[data-en="${i.title}"]`);
-                return `${titleNode ? titleNode.innerText : i.title} (${i.amount} ETB)`;
-            }).join(", ");
-
-            const dataPayload = {
-                member_name: activeUser.name,
-                member_phone: activeUser.phone,
-                member_choir: activeUser.choir,
-                member_password: activeUser.password,
-                member_avatar: activeUser.avatar,
-                is_new_user: activeUser.isNewUser,
-                selected_items: itemsString,
-                total_amount: totalAmount,
-                txn_id: txnId,
-                target_account: "1000524648907"
-            };
-
-            if(tg && typeof tg.sendData === 'function') {
-                tg.sendData(JSON.stringify(dataPayload));
-                closeCBEGateway();
-                tg.close();
-            } else {
-                alert("Data simulation successful context tracking verified.");
-                console.log(dataPayload);
-            }
-        }
-    </script>
-</body>
-</html>
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    flask_app.run(host="0.0.0.0", port=port, debug=False)

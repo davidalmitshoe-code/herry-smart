@@ -2,47 +2,57 @@ import os
 import json
 import logging
 import asyncio
+import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+# 1. Setup Logging & Debug Output
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# CONFIGURATION DEFINITIONS
+# 2. Configuration Settings (Falls back to defaults if environment variables aren't set)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8820217071:AAGltetsRpmnq4OG_osBdHH5pcvL0EJNdG4")
 OWNER_CHAT_ID = int(os.environ.get("OWNER_CHAT_ID", 998942116))
 DB_FILE = "umc_database.json"
 WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
 
+# 3. Initialize Flask and Enable CORS
 flask_app = Flask(__name__)
 CORS(flask_app)
 
+# 4. Initialize Telegram Application
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-# Create and maintain a persistent global background loop running on its own thread context
+# 5. Create a dedicated event loop to process Telegram tasks in the background
 bot_loop = asyncio.new_event_loop()
 
 def start_background_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
-import threading
+# Start the background thread immediately
 threading.Thread(target=start_background_loop, args=(bot_loop,), daemon=True).start()
 
+# 6. Database Helper Functions
 def load_db():
-    if not os.path.exists(DB_FILE): return {"users": {}}
+    if not os.path.exists(DB_FILE): 
+        return {"users": {}}
     try:
-        with open(DB_FILE, "r") as f: return json.load(f)
-    except Exception: return {"users": {}}
+        with open(DB_FILE, "r") as f: 
+            return json.load(f)
+    except Exception: 
+        return {"users": {}}
 
 def save_db(data):
     try:
-        with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
-    except Exception as e: logger.error(f"Error saving database: {e}")
+        with open(DB_FILE, "w") as f: 
+            json.dump(data, f, indent=4)
+    except Exception as e: 
+        logger.error(f"Error saving database: {e}")
 
-# --- Core Bot Execution Handlers ---
+# --- Core Telegram Bot Handlers ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info(f"Start command triggered by user: {update.effective_user.id}")
@@ -72,6 +82,7 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
         name = payload.get('member_name', '').strip()
         is_new = payload.get('is_new_user', False)
 
+        # Handle registration saving
         if is_new and name:
             db = load_db()
             db["users"][name] = {
@@ -84,6 +95,7 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             save_db(db)
             logger.info(f"Successfully registered user: {name}")
 
+        # Construct admin log alert
         admin_alert_message = (
             "🚨 **NEW SYSTEM ACTION SUBMISSION** 🚨\n\n"
             "👤 **MEMBER PROFILE:**\n"
@@ -101,6 +113,7 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
 
         await context.bot.send_message(chat_id=OWNER_CHAT_ID, text=admin_alert_message, parse_mode="Markdown")
         
+        # Send receipt back to user
         user_confirmation = (
             "✅ **UMC Wallet Submission Successful!**\n\n"
             f"Thank you, **{name}**!\n"
@@ -111,13 +124,15 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             await update.message.reply_text(text=user_confirmation, parse_mode="Markdown")
 
     except Exception as e:
-        logger.error(f"Error mapping payload attributes: {e}")
+        logger.error(f"Error processing Mini App dataset payload: {e}")
 
+# Register Telegram command and status listeners
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
 
-# Initialize application setup config patterns inside our active runner loop context
+# Initialize application settings inside our persistent thread loop structure
 asyncio.run_coroutine_threadsafe(telegram_app.initialize(), bot_loop).result()
+
 
 # --- Flask Server Architecture Routing ---
 
@@ -131,26 +146,32 @@ def telegram_webhook():
         update_data = request.get_json(force=True)
         update = Update.de_json(update_data, telegram_app.bot)
         
-        # FIX: Fire-and-forget payload update thread processing!
-        # Flask returns 'OK' instantly to telegram within 5ms, avoiding the timeout completely.
+        # Hands off the update processing to the background loop.
+        # Flask returns 'OK' to Telegram within milliseconds, completely avoiding the timeout!
         asyncio.run_coroutine_threadsafe(telegram_app.process_update(update), bot_loop)
         
         return 'OK', 200
     except Exception as err:
-        logger.error(f"Webhook tracking error: {err}")
+        logger.error(f"Webhook structural extraction fault: {err}")
         return 'Internal Error', 500
 
+# Handles multiple URL formats to completely avoid 404 Not Found errors
 @flask_app.route('/set_webhook', methods=['GET', 'POST'])
+@flask_app.route('/setwebhook', methods=['GET', 'POST'])
 def set_webhook():
     public_url = f"https://{request.host}/telegram-webhook"
     try:
         future = asyncio.run_coroutine_threadsafe(telegram_app.bot.set_webhook(url=public_url), bot_loop)
         success = future.result()
         if success:
-            return jsonify({"status": "success", "message": f"Webhook linked to {public_url}"})
-        return jsonify({"status": "failed"}), 500
+            return jsonify({
+                "status": "success", 
+                "message": f"Webhook linked successfully to {public_url}"
+            }), 200
+        return jsonify({"status": "failed", "reason": "Telegram engine rejected webhook configuration parameters."}), 500
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

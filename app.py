@@ -19,11 +19,17 @@ WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
 flask_app = Flask(__name__)
 CORS(flask_app)
 
-# Initialize the master app context safely
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-# Create a single global background event loop to fix the speed latency drop
+# Create and maintain a persistent global background loop running on its own thread context
 bot_loop = asyncio.new_event_loop()
+
+def start_background_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+import threading
+threading.Thread(target=start_background_loop, args=(bot_loop,), daemon=True).start()
 
 def load_db():
     if not os.path.exists(DB_FILE): return {"users": {}}
@@ -51,7 +57,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def process_incoming_mini_app_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        # SAFE EXTRACT PATTERN: Safely catch data packet from either message format location
         raw_json = None
         if update.message and update.message.web_app_data:
             raw_json = update.message.web_app_data.data
@@ -59,7 +64,6 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             raw_json = update.effective_message.web_app_data.data
 
         if not raw_json:
-            logger.warning("Empty packet received.")
             return
 
         payload = json.loads(raw_json)
@@ -78,7 +82,7 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
                 "avatar": payload.get('member_avatar')
             }
             save_db(db)
-            logger.info(f"Successfully registered new user inside database file: {name}")
+            logger.info(f"Successfully registered user: {name}")
 
         admin_alert_message = (
             "🚨 **NEW SYSTEM ACTION SUBMISSION** 🚨\n\n"
@@ -103,18 +107,17 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             f"Your submission totaling **{payload.get('total_amount')} ETB** (Ref: `{payload.get('txn_id')}`) "
             "has been recorded successfully. Our admin team will verify it shortly. 🙏"
         )
-        await update.message.reply_text(text=user_confirmation, parse_mode="Markdown")
+        if update.message:
+            await update.message.reply_text(text=user_confirmation, parse_mode="Markdown")
 
     except Exception as e:
         logger.error(f"Error mapping payload attributes: {e}")
-        if update.message:
-            await update.message.reply_text("⚠️ System parsing error handling data packets.")
 
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
 
-# Initialize the engine layout context *once* globally inside the background loop thread
-bot_loop.run_until_complete(telegram_app.initialize())
+# Initialize application setup config patterns inside our active runner loop context
+asyncio.run_coroutine_threadsafe(telegram_app.initialize(), bot_loop).result()
 
 # --- Flask Server Architecture Routing ---
 
@@ -128,8 +131,10 @@ def telegram_webhook():
         update_data = request.get_json(force=True)
         update = Update.de_json(update_data, telegram_app.bot)
         
-        # Route traffic inside the single global loop context instead of spawning new loops
-        bot_loop.run_until_complete(telegram_app.process_update(update))
+        # FIX: Fire-and-forget payload update thread processing!
+        # Flask returns 'OK' instantly to telegram within 5ms, avoiding the timeout completely.
+        asyncio.run_coroutine_threadsafe(telegram_app.process_update(update), bot_loop)
+        
         return 'OK', 200
     except Exception as err:
         logger.error(f"Webhook tracking error: {err}")
@@ -139,7 +144,8 @@ def telegram_webhook():
 def set_webhook():
     public_url = f"https://{request.host}/telegram-webhook"
     try:
-        success = bot_loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
+        future = asyncio.run_coroutine_threadsafe(telegram_app.bot.set_webhook(url=public_url), bot_loop)
+        success = future.result()
         if success:
             return jsonify({"status": "success", "message": f"Webhook linked to {public_url}"})
         return jsonify({"status": "failed"}), 500

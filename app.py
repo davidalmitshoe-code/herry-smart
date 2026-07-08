@@ -19,7 +19,11 @@ WEBAPP_URL = "https://davidalmitshoe-code.github.io/herry-smart/"
 flask_app = Flask(__name__)
 CORS(flask_app)
 
+# Initialize the master app context safely
 telegram_app = Application.builder().token(BOT_TOKEN).build()
+
+# Create a single global background event loop to fix the speed latency drop
+bot_loop = asyncio.new_event_loop()
 
 def load_db():
     if not os.path.exists(DB_FILE): return {"users": {}}
@@ -36,8 +40,6 @@ def save_db(data):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info(f"Start command triggered by user: {update.effective_user.id}")
-    
-    # Persistent Keyboard layout allowing tg.sendData to operate correctly
     keyboard = [[KeyboardButton(text="🎵 Open UMC Wallet", web_app=WebAppInfo(url=WEBAPP_URL))]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
     
@@ -49,15 +51,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def process_incoming_mini_app_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        raw_json = update.message.web_app_data.data
+        # SAFE EXTRACT PATTERN: Safely catch data packet from either message format location
+        raw_json = None
+        if update.message and update.message.web_app_data:
+            raw_json = update.message.web_app_data.data
+        elif update.effective_message and update.effective_message.web_app_data:
+            raw_json = update.effective_message.web_app_data.data
+
+        if not raw_json:
+            logger.warning("Empty packet received.")
+            return
+
         payload = json.loads(raw_json)
         tg_username = f"@{update.effective_user.username}" if update.effective_user.username else "No Username"
 
-        # Extract signup data elements from the web app payload
         name = payload.get('member_name', '').strip()
         is_new = payload.get('is_new_user', False)
 
-        # Commit directly into database state array if it's a new registration
         if is_new and name:
             db = load_db()
             db["users"][name] = {
@@ -70,7 +80,6 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
             save_db(db)
             logger.info(f"Successfully registered new user inside database file: {name}")
 
-        # 1. Structure the data alert view layout for Admin Channel
         admin_alert_message = (
             "🚨 **NEW SYSTEM ACTION SUBMISSION** 🚨\n\n"
             "👤 **MEMBER PROFILE:**\n"
@@ -88,7 +97,6 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
 
         await context.bot.send_message(chat_id=OWNER_CHAT_ID, text=admin_alert_message, parse_mode="Markdown")
         
-        # 2. Return the clean successful message validation back to the user
         user_confirmation = (
             "✅ **UMC Wallet Submission Successful!**\n\n"
             f"Thank you, **{name}**!\n"
@@ -99,29 +107,29 @@ async def process_incoming_mini_app_payment(update: Update, context: ContextType
 
     except Exception as e:
         logger.error(f"Error mapping payload attributes: {e}")
-        await update.message.reply_text("⚠️ System parsing error handling data packets.")
+        if update.message:
+            await update.message.reply_text("⚠️ System parsing error handling data packets.")
 
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, process_incoming_mini_app_payment))
+
+# Initialize the engine layout context *once* globally inside the background loop thread
+bot_loop.run_until_complete(telegram_app.initialize())
 
 # --- Flask Server Architecture Routing ---
 
 @flask_app.route('/')
 def serve_index(): 
-    return "UMC Engine Online 🚀", 200
+    return "UMC Engine Online & Operational 🚀", 200
 
 @flask_app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     try:
         update_data = request.get_json(force=True)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
         update = Update.de_json(update_data, telegram_app.bot)
-        loop.run_until_complete(telegram_app.initialize())
-        loop.run_until_complete(telegram_app.process_update(update))
-        loop.close()
         
+        # Route traffic inside the single global loop context instead of spawning new loops
+        bot_loop.run_until_complete(telegram_app.process_update(update))
         return 'OK', 200
     except Exception as err:
         logger.error(f"Webhook tracking error: {err}")
@@ -129,13 +137,9 @@ def telegram_webhook():
 
 @flask_app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
-    public_url = request.args.get('url') or f"https://{request.host}/telegram-webhook"
+    public_url = f"https://{request.host}/telegram-webhook"
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(telegram_app.initialize())
-        success = loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
-        loop.close()
+        success = bot_loop.run_until_complete(telegram_app.bot.set_webhook(url=public_url))
         if success:
             return jsonify({"status": "success", "message": f"Webhook linked to {public_url}"})
         return jsonify({"status": "failed"}), 500

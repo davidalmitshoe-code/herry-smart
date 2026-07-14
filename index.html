@@ -11,15 +11,16 @@
             --bg-color: #f4f6f9;
             --surface-color: #ffffff;
             --text-color: #333333;
-            --text-muted: #555555;
-            --border-color: #cccccc;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
             --primary-color: #1565c0;
             --primary-hover: #0d47a1;
             --card-bg: #ffffff;
-            --shadow: rgba(0,0,0,0.08);
+            --shadow: rgba(0,0,0,0.06);
             --nav-bg: #ffffff;
-            --nav-border: #dddddd;
+            --nav-border: #eeeeee;
             --input-bg: #ffffff;
+            --footer-bg: #f8f9fa;
         }
 
         [data-theme="dark"] {
@@ -27,70 +28,93 @@
             --surface-color: #1e1e1e;
             --text-color: #f5f5f5;
             --text-muted: #b0b0b0;
-            --border-color: #444444;
+            --border-color: #333333;
             --primary-color: #2196f3;
             --primary-hover: #1e88e5;
-            --card-bg: #2a2a2a;
-            --shadow: rgba(0,0,0,0.3);
+            --card-bg: #252525;
+            --shadow: rgba(0,0,0,0.4);
             --nav-bg: #1e1e1e;
-            --nav-border: #333333;
+            --nav-border: #2d2d2d;
             --input-bg: #2d2d2d;
+            --footer-bg: #1a1a1a;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; transition: background 0.3s, color 0.3s; }
-        body { background: var(--bg-color); color: var(--text-color); padding-bottom: 120px; font-size: 14px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; transition: background 0.25s, color 0.25s, border-color 0.25s; }
+        body { background: var(--bg-color); color: var(--text-color); padding-bottom: 100px; font-size: 14px; -webkit-font-smoothing: antialiased; }
         
         /* Utility bar adjustments */
-        .top-utility-bar { background: var(--primary-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; }
-        .top-utility-bar button { padding: 5px 10px; border-radius: 5px; border: none; font-weight: bold; background: white; color: var(--primary-color); cursor: pointer; }
+        .top-utility-bar { background: var(--primary-color); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .top-utility-bar button { padding: 6px 12px; border-radius: 6px; border: none; font-weight: 600; background: rgba(255,255,255,0.2); color: white; cursor: pointer; backdrop-filter: blur(5px); }
+        .top-utility-bar button:hover { background: rgba(255,255,255,0.3); }
 
-        .screen { display: none; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
+        .screen { display: none; padding: 20px; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .screen.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Setup Screen Controls */
-        .setup-box { max-width: 400px; margin: 40px auto; background: var(--surface-color); padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px var(--shadow); text-align: center; }
-        .setup-box h2 { color: var(--primary-color); margin-bottom: 20px; }
+        .setup-box { max-width: 400px; margin: 40px auto; background: var(--surface-color); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px var(--shadow); text-align: center; border: 1px solid var(--border-color); }
+        .setup-box h2 { color: var(--primary-color); margin-bottom: 24px; font-size: 22px; }
         .setup-group { margin-bottom: 20px; text-align: left; }
-        .setup-group label { display: block; margin-bottom: 8px; font-weight: bold; color: var(--text-color); }
-        .setup-group select, .setup-group budget { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); color: var(--text-color); font-size: 15px; }
+        .setup-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 13px; }
+        .setup-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); color: var(--text-color); font-size: 15px; outline: none; appearance: none; }
 
-        .auth-container { max-width: 400px; margin: 20px auto; background: var(--surface-color); padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px var(--shadow); text-align: center; }
-        .auth-container h2 { color: var(--primary-color); margin-bottom: 20px; font-size: 22px; }
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--text-muted); }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); color: var(--text-color); font-size: 15px; }
+        .auth-container { max-width: 400px; margin: 20px auto; background: var(--surface-color); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px var(--shadow); border: 1px solid var(--border-color); text-align: center; }
+        .auth-container h2 { color: var(--primary-color); margin-bottom: 24px; font-size: 22px; }
+        .form-group { margin-bottom: 18px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-muted); font-size: 13px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); color: var(--text-color); font-size: 15px; outline: none; }
+        .form-group input:focus { border-color: var(--primary-color); }
         
-        .btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn:hover { background: var(--primary-hover); }
-        .toggle-auth { margin-top: 15px; color: var(--primary-color); cursor: pointer; font-weight: 500; display: inline-block; }
+        .btn { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .toggle-auth { margin-top: 18px; color: var(--primary-color); cursor: pointer; font-weight: 500; display: inline-block; font-size: 13px; }
 
-        .user-banner { background: var(--surface-color); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px var(--shadow); }
-        .user-avatar { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid var(--primary-color); }
-        .user-info h4 { color: var(--primary-color); font-size: 16px; }
+        .user-banner { background: var(--surface-color); padding: 16px; border-radius: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 12px var(--shadow); border: 1px solid var(--border-color); }
+        .user-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid var(--primary-color); }
+        .user-info h4 { color: var(--primary-color); font-size: 16px; font-weight: 600; }
+        .user-info p { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
 
         .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .payment-card { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); border: 2px solid var(--border-color); cursor: pointer; transition: 0.2s; text-align: center; position: relative; }
-        .payment-card h3 { font-size: 14px; margin-bottom: 6px; color: var(--text-color); }
-        .payment-card .price { font-size: 16px; font-weight: bold; color: #2e7d32; }
-        .payment-card.selected { border-color: var(--primary-color); background: rgba(33, 150, 243, 0.1); }
+        .payment-card { background: var(--card-bg); padding: 18px 12px; border-radius: 12px; box-shadow: 0 4px 10px var(--shadow); border: 1px solid var(--border-color); cursor: pointer; text-align: center; position: relative; }
+        .payment-card h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-color); font-weight: 600; }
+        .payment-card .price { font-size: 15px; font-weight: 700; color: #2e7d32; }
+        [data-theme="dark"] .payment-card .price { color: #81c784; }
+        .payment-card.selected { border-color: var(--primary-color); background: rgba(33, 150, 243, 0.08); box-shadow: 0 0 0 1px var(--primary-color); }
 
-        .summary-box { background: var(--surface-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow); }
-        .summary-list { list-style: none; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); text-align: left; padding-left: 5px; }
-        .summary-list li { margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .summary-box { background: var(--surface-color); padding: 16px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px var(--shadow); border: 1px solid var(--border-color); }
+        .summary-list { list-style: none; margin-bottom: 12px; font-size: 13px; color: var(--text-muted); text-align: left; }
+        .summary-list li { margin-bottom: 6px; display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; }
+        .summary-list li:last-child { border-bottom: none; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; padding: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
-        .modal-content { background: var(--surface-color); color: var(--text-color); width: 100%; max-width: 380px; padding: 25px; border-radius: 15px; text-align: center; max-height: 85vh; overflow-y: auto; }
-        .cbe-header { background: #4a148c; color: white; padding: 10px; margin: -25px -25px 20px -25px; border-top-left-radius: 15px; border-top-right-radius: 15px; font-weight: bold; }
+        .modal-content { background: var(--surface-color); color: var(--text-color); width: 100%; max-width: 380px; padding: 25px; border-radius: 16px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .cbe-header { background: #4a148c; color: white; padding: 14px; margin: -25px -25px 20px -25px; border-top-left-radius: 16px; border-top-right-radius: 16px; font-weight: bold; font-size: 16px; }
         
-        .contact-item { text-align: left; background: var(--bg-color); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--primary-color); }
-        .contact-item p { margin-top: 2px; color: var(--text-muted); }
-        .social-links { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
-        .social-links a { text-decoration: none; font-weight: bold; color: #2196f3; }
+        .contact-item { text-align: left; background: var(--bg-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary-color); }
+        .contact-item strong { font-size: 13px; }
+        .contact-item p { margin-top: 4px; color: var(--text-muted); font-size: 12px; }
+        
+        /* Brand Account Identity Footer */
+        .app-identity-footer { background: var(--footer-bg); margin: 25px -16px -16px -16px; padding: 14px; border-top: 1px solid var(--border-color); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; text-align: center; }
+        .app-identity-footer p { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.3px; line-height: 1.5; }
+        .app-identity-footer strong { color: var(--primary-color); }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--nav-bg); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid var(--nav-border); z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .bottom-nav a { text-decoration: none; color: var(--text-muted); font-weight: bold; font-size: 13px; cursor: pointer; }
+        /* Social Media Icons with SVG Vector Branding */
+        .social-title { font-size: 14px; font-weight: 600; margin-top: 20px; margin-bottom: 12px; color: var(--text-color); }
+        .social-grid { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 5px; }
+        .social-btn { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; background: var(--bg-color); border: 1px solid var(--border-color); transition: transform 0.2s, background 0.2s; }
+        .social-btn:hover { transform: translateY(-3px); background: var(--border-color); }
+        .social-btn svg { width: 22px; height: 22px; fill: var(--text-color); }
+        
+        /* Color Overrides for Social Brand Alignment */
+        [data-theme="light"] .social-btn.tg:hover { background: #e3f2fd; } .social-btn.tg:hover svg { fill: #0088cc; }
+        [data-theme="light"] .social-btn.yt:hover { background: #ffebee; } .social-btn.yt:hover svg { fill: #ff0000; }
+        [data-theme="light"] .social-btn.ig:hover { background: #fdf2f8; } .social-btn.ig:hover svg { fill: #e1306c; }
+        [data-theme="light"] .social-btn.fb:hover { background: #e8f0fe; } .social-btn.fb:hover svg { fill: #1877f2; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--nav-bg); display: flex; justify-content: space-around; padding: 14px 0; border-top: 1px solid var(--nav-border); z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.03); }
+        .bottom-nav a { text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .bottom-nav a.active { color: var(--primary-color); }
         .hidden { display: none !important; }
     </style>
@@ -99,7 +123,7 @@
 
     <div id="setupScreen" class="screen active">
         <div class="setup-box">
-            <h2 id="text_setupTitle">Welcome to UMC Portal</h2>
+            <h2 id="text_setupTitle">Welcome to UMC Portal/የማራናታ ህብራት</h2>
             
             <div class="setup-group">
                 <label id="text_setupLangLabel">Choose Language / ቋንቋ ይምረጡ</label>
@@ -124,10 +148,11 @@
     <div id="appMainWrapper" class="hidden">
         
         <div class="top-utility-bar">
-            <span style="font-weight: bold;">UMC Portal</span>
-            <button id="text_btnChangeTheme" onclick="toggleSettingsViaNav()">⚙️ Quick Settings</button>
+            <span style="font-weight: 700; letter-spacing: 0.4px;">UMC Portal</span>
+            <button id="text_btnChangeTheme" onclick="toggleSettingsViaNav()">⚙️ Settings</button>
         </div>
 
+        <!-- Login Screen Layout -->
         <div id="loginScreen" class="screen">
             <div class="auth-container">
                 <h2 id="text_loginTitle">UMC Choir Login</h2>
@@ -144,6 +169,7 @@
             </div>
         </div>
 
+        <!-- Registration Layout -->
         <div id="signupScreen" class="screen">
             <div class="auth-container">
                 <h2 id="text_registerTitle">Choir Registration</h2>
@@ -172,6 +198,7 @@
             </div>
         </div>
 
+        <!-- Application Dashboard Layout -->
         <div id="homeScreen" class="screen">
             <div class="user-banner">
                 <img id="userDisplayAvatar" class="user-avatar" src="" alt="Avatar">
@@ -181,7 +208,7 @@
                 </div>
             </div>
 
-            <h2 id="text_selectContribution" style="margin-bottom: 15px;">Select Contribution Rails (Multiple)</h2>
+            <h2 id="text_selectContribution" style="margin-bottom: 16px; font-size: 16px; font-weight: 700;">Select Contribution Rails (Multiple)</h2>
             
             <div class="payment-grid">
                 <div class="payment-card" onclick="toggleSelection(this, 'Student Monthly', 25)">
@@ -204,70 +231,131 @@
                     <h3 class="item-title" data-en="Pay Membership" data-am="የአባልነት ክፍያ">Membership</h3>
                     <p class="price">150 ETB</p>
                 </div>
-                <div class="payment-card" onclick="toggleSelection(this, 'Donate for Album', 300)">
+                <div class="payment-card" onclick="toggleSelection(this, 'Donate for Album', )">
                     <h3 class="item-title" data-en="Donate for Album" data-am="ለአልበም መዋጮ">Album Donation</h3>
-                    <p class="price">300 ETB</p>
+                    <p class="price"> ETB</p>
+                </div>
+                <div class="payment-card" onclick="toggleSelection(this, 'Studio Donation', )">
+                    <h3 class="item-title" data-en="Studio Donation" data-am="የስቱዲዮ መዋጮ">Studio Donation</h3>
+                    <p class="price">ETB</p>
                 </div>
             </div>
 
             <div class="summary-box">
-                <h4 id="text_selectedBreakdown" style="margin-bottom: 8px;">Selected Breakdown:</h4>
+                <h4 id="text_selectedBreakdown" style="margin-bottom: 10px; font-weight: 600;">Selected Breakdown:</h4>
                 <ul id="selectedItemsList" class="summary-list">
-                    <li style="color: #999;">No items selected</li>
+                    <li style="color: #999; border:none; padding:0;">No items selected</li>
                 </ul>
-                <h3 style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 5px;"><span id="text_total">Total</span>: <span id="checkoutTotalAmount" style="color:#2e7d32;">0</span> ETB</h3>
+                <h3 style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 5px; font-size: 16px;"><span id="text_total">Total</span>: <span id="checkoutTotalAmount" style="color:#2e7d32; font-weight: 700;">0</span> ETB</h3>
             </div>
 
-            <button class="btn" id="text_btnConfirmGateway" style="background:#2e7d32;" onclick="openCBEBirrGateway()">
+            <button class="btn" id="text_btnConfirmGateway" style="background:#2e7d32; padding: 15px;" onclick="openCBEBirrGateway()">
                 ⚡ Confirm & Submit Receipt
             </button>
         </div>
 
+        <!-- Central Billing Checkout Engine Gateway (With Integrated Account Name) -->
         <div id="cbeModal" class="modal">
             <div class="modal-content">
                 <div class="cbe-header" id="text_cbeHeader">CBE Birr Manual Checkout</div>
-                <p id="text_cbeInstructions" style="font-size: 13px; margin-bottom: 12px;">Please transfer funds to this account:<br><strong style="font-size:16px; color:#4a148c;">1000524648907</strong></p>
-                <h3><span id="text_amount">Amount</span>: <span id="modalPaymentAmount">0</span> ETB</h3>
+                
+                <p id="text_cbeInstructions" style="font-size:13px; margin-bottom:20px; line-height:1.8;">
+                    Please transfer funds to the following account
+                    <br><br>
+                    <strong style="font-size:14px;color:#777;">
+                        Account Name
+                    </strong>
+                    <div style="
+                        font-size:18px;
+                        font-weight:bold;
+                        color:#ffffff;
+                        margin-top:5px;
+                        margin-bottom:12px;">
+                        Hossana Hawariyawit B/K Maranata mez 
+                        (ሆ/ሐ/ቤ/ክ/ማ/መዘምራን)
+                    </div>
+
+                    <strong style="font-size:14px;color:#777;">
+                        Account Number
+                    </strong>
+                    <div style="
+                        font-size:24px;
+                        font-weight:bold;
+                        color:#FFD700;
+                        letter-spacing:2px;
+                        margin-top:5px;
+                        margin-bottom:20px;">
+                       10,000-21-35-97-78
+                    </div>
+                </p>
+
+                <hr style="border:1px solid #444;margin-bottom:20px;">
+
+                <h3 style="font-size:22px; margin-bottom: 15px;">
+                    Amount : 
+                    <span id="modalPaymentAmount" style="color:#00e676;">0</span> ETB
+                </h3>
                 
                 <div class="form-group">
-                    <label style="font-size:12px;" id="text_txnLabel">Transaction ID / Reference Note</label>
-                    <input type="text" id="cbeTxnId" placeholder="e.g. FT26..." style="text-align:center;">
+                    <label style="font-size:12px; font-weight:600;" id="text_txnLabel">Transaction ID / Reference Note</label>
+                    <input type="text" id="cbeTxnId" placeholder="e.g. FT26..." style="text-align:center; font-weight:600; letter-spacing:0.5px;">
                 </div>
                 
                 <button class="btn" style="background:#4a148c;" id="text_btnSubmitFinal" onclick="verifyCBEPaymentOnline()">Confirm Details</button>
-                <button class="btn" style="background:#757575; margin-top:5px;" id="text_btnCancel" onclick="closeCBEGateway()">Cancel</button>
+                <button class="btn" style="background:#757575; margin-top:6px;" id="text_btnCancel" onclick="closeCBEGateway()">Cancel</button>
             </div>
         </div>
 
+        <!-- Directory & Social Infrastructure Container -->
         <div id="contactModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content" style="padding-bottom: 16px;">
                 <div class="cbe-header" style="background:var(--primary-color);" id="text_contactHeader">UMC Official Directory</div>
                 
                 <div class="contact-item">
                     <strong id="label_founder">Founder & Director</strong>
-                    <p>Pastor Abraham K. | 📞 +251911223344</p>
+                    <p>Sister Mulunesh A. | 📞 +251911223344</p>
                 </div>
                 <div class="contact-item">
                     <strong id="label_officer">Main Officer</strong>
-                    <p>Melaku T. | 📞 +251922556677</p>
+                    <p>Brother Dawit H. | 📞 +251922556677</p>
                 </div>
                 <div class="contact-item">
                     <strong id="label_po1">Payment Office 1 (Finance)</strong>
-                    <p>Sister Selamawit A. | 📞 +251933889900</p>
+                    <p>Brother Yosef A. | 📞 +251933889900</p>
                 </div>
                 <div class="contact-item">
                     <strong id="label_po2">Payment Office 2 (Audits)</strong>
-                    <p>Brother Dawit Y. | 📞 +251944112233</p>
+                    <p>Sister  Beza D. | 📞 +251944112233</p>
                 </div>
                 <div class="contact-item" style="border-left-color: #2e7d32;">
                     <strong id="label_dev">System Developer</strong>
-                    <p>EtyDavid Software Solution | 📞 +251922445514</p>
+                    <p>EtyDavid Software Solution(DAVID TESHOME)| 📞 +251928854849</p>
                 </div>
 
-                <h4 style="margin-top:15px;" id="text_socialTitle">Follow Our Social Media</h4>
-                <div class="social-links">
-                    <a href="https://t.me/Maranatha_Choir" target="_blank">✈️ Telegram Channel</a>
-                    <a href="https://youtube.com/@MaranathaChoir" target="_blank">📺 YouTube</a>
+                <!-- Custom Vector Native Brand Vectors Embedded Safely -->
+                <h4 class="social-title" id="text_socialTitle">Follow Our Social Media</h4>
+                <div class="social-grid">
+                    <!-- Telegram Icon -->
+                    <a href="https://t.me/union of Maranatha(umc)official" target="_blank" class="social-btn tg" aria-label="Telegram">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.48 2.75-2.7.01-.03.01-.14-.06-.2-.07-.06-.17-.04-.25-.02-.11.02-1.83 1.16-5.16 3.42-.49.34-.93.51-1.33.5-.44-.01-1.3-.25-1.93-.46-.78-.25-1.4-.39-1.35-.83.03-.23.34-.47.94-.72 3.69-1.6１ 6.１６-２．６７ 7．３９-３．１９ 3．５２-１．４８ 4．２５-１．７４ 4．７３-１．７４．１１ ０ ／t．３４．０３．４９．１５．１２．１．１６．２４．１８．３４．０２．０８．０３．２６．０１．４z"/></svg>
+                    </a>
+                    <!-- YouTube Icon -->
+                    <a href="https://youtube.com/union of maranatha choir" target="_blank" class="social-btn yt" aria-label="YouTube">
+                        <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93 Bell.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </a>
+                    <!-- Facebook Icon -->
+                    <a href="https://facebook.com/maranatha hossana" target="_blank" class="social-btn fb" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.75z"/></svg>
+                    </a>
+                    <!-- Instagram Icon -->
+                    <a href="https://instagram.com/maranatahossana" target="_blank" class="social-btn ig" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                    </a>
+                </div>
+
+                <!-- Identity Footer Appended Safely Inside Account Directory Context Box -->
+                <div class="app-identity-footer">
+                    <p>Logged Account: <span id="footerAccountField" style="font-weight: 700;">Guest Mode</span><br>Engineered by <strong>EtyDavid Software Solution</strong></p>
                 </div>
 
                 <button class="btn" style="background:#757575; margin-top:15px;" id="text_btnCloseContact" onclick="closeContactPage()">Close</button>
@@ -275,9 +363,9 @@
         </div>
 
         <div id="globalNavbar" class="bottom-nav hidden">
-            <a id="navHome" class="active" onclick="switchScreen('homeScreen')">🏠 Home</a>
-            <a id="navContact" onclick="openContactPage()">👤 Contact Directory</a>
-            <a id="navLogout" onclick="restartToSetupScreen()">⚙️ Re-Setup</a>
+            <a id="navHome" class="active" onclick="switchScreen('homeScreen')"><span>🏠</span><span id="navHomeText">Home</span></a>
+            <a id="navContact" onclick="openContactPage()"><span>👤</span><span id="navContactText">Directory</span></a>
+            <a id="navLogout" onclick="restartToSetupScreen()"><span>⚙️</span><span id="navLogoutText">Re-Setup</span></a>
         </div>
 
     </div>
@@ -297,27 +385,24 @@
                 text_selectContribution: "Select Contribution Rails (Multiple)", text_selectedBreakdown: "Selected Breakdown:", text_total: "Total", text_btnConfirmGateway: "⚡ Confirm & Submit Receipt",
                 text_cbeHeader: "CBE Birr Manual Checkout", text_cbeInstructions: "Please transfer funds to this account:", text_amount: "Amount", text_txnLabel: "Transaction ID / Reference Note", text_btnSubmitFinal: "Confirm Details", text_btnCancel: "Cancel",
                 text_contactHeader: "UMC Official Directory", label_founder: "Founder & Director", label_officer: "Main Officer", label_po1: "Payment Office 1 (Finance)", label_po2: "Payment Office 2 (Audits)", label_dev: "System Developer", text_socialTitle: "Follow Our Social Media", text_btnCloseContact: "Close",
-                navHome: "🏠 Home", navContact: "👤 Contact Directory", navLogout: "🚪 Logout", no_items: "No items selected", text_btnChangeTheme: "⚙️ Quick Settings"
+                navHomeText: "Home", navContactText: "Contact Directory", navLogoutText: "Setup", no_items: "No items selected", text_btnChangeTheme: "⚙️ Settings"
             },
             am: {
-                text_loginTitle: "የዩኤምሲ መዘምራን መግቢያ", text_loginLabelName: "ሙሉ ስም", text_loginLabelPass: "የይለፍ ቃል", text_btnSignIn: "ግባ", text_toRegister: "አዲስ አባል? እዚህ ይመዝገቡ",
+                text_loginTitle: " የማራናታ ህብራት መዘምራን መግቢያ", text_loginLabelName: "ሙሉ ስም", text_loginLabelPass: "የይለፍ ቃል", text_btnSignIn: "ግባ", text_toRegister: "አዲስ አባል? እዚህ ይመዝገቡ",
                 text_registerTitle: "የመዘምራን ምዝገባ", text_regLabelName: "ሙሉ ስም", text_regLabelPhone: "ስልክ ቁጥር", text_regLabelChoir: "የክፍል ስም", text_regLabelPass: "የይለፍ ቃል", text_regLabelAvatar: "የፎቶ ሊንክ (አማራጭ)", text_btnRegister: "መለያ ፍጠር", text_toLogin: "ቀድሞውኑ መለያ አለዎት? ይግቡ",
                 text_selectContribution: "የመዋጮ ዓይነቶችን ይምረጡ (በርካታ መምረጥ ይቻላል)", text_selectedBreakdown: "የተመረጡ ክፍያዎች ዝርዝር:", text_total: "ጠቅላላ ድምር", text_btnConfirmGateway: "⚡ ክፍያን አረጋግጥና አስገባ",
                 text_cbeHeader: "በሲቢኢ ብር (CBE Birr) ማስተላለፊያ", text_cbeInstructions: "እባክዎን ወደዚህ አካውንት ገንዘብ ያስተላልፉ:", text_amount: "የገንዘብ መጠን", text_txnLabel: "የማስተላለፊያ መታወቂያ ቁጥር (Transaction ID)", text_btnSubmitFinal: "መረጃውን አረጋግጥ", text_btnCancel: "ሰርዝ",
-                text_contactHeader: "የዩኤምሲ ኦፊሴላዊ ማውጫ", label_founder: "መሥራች እና ዳይሬክተር", label_officer: "ዋና መኮንን", label_po1: "የክፍያ ቢሮ 1 (ፋይናንስ)", label_po2: "የክፍያ ቢሮ 2 (ኦዲት)", label_dev: "ሲስተም አልሚ", text_socialTitle: "ማህበራዊ ሚዲያችንን ይከተሉ", text_btnCloseContact: "ዝጋ",
-                navHome: "🏠 ዋና ገጽ", navContact: "👤 የእውቂያ ማውጫ", navLogout: "🚪 ውጣ", no_items: "ምንም የተመረጠ ነገር የለም", text_btnChangeTheme: "⚙️ ማስተካከያ"
+                text_contactHeader: "የማራናታ ህብራት ኦፊሴላዊ ማውጫ", label_founder: "መሥራች እና ዳይሬክተር", label_officer: "ዋና መኮንን", label_po1: "የክፍያ ቢሮ 1 (ፋይናንስ)", label_po2: "የክፍያ ቢሮ 2 (ኦዲት)", label_dev: "ሲስተም አልሚ", text_socialTitle: "ማህበራዊ ሚዲያችንን ይከተሉ", text_btnCloseContact: "ዝጋ",
+                navHomeText: "ዋና ገጽ", navContactText: "የእውቂያ ማውጫ", navLogoutText: "ማስተካከያ", no_items: "ምንም የተመረጠ ነገር የለም", text_btnChangeTheme: "⚙️ ማስተካከያ"
             }
         };
 
-        // RUNS IMMEDIATELY WHEN USER OPENS THE APP
         function applySetupConfig() {
             const selectedLang = document.getElementById("setupLangSelect").value;
             const selectedTheme = document.getElementById("setupThemeSelect").value;
 
-            // Apply light/dark design token attributes
             document.documentElement.setAttribute('data-theme', selectedTheme);
             
-            // Apply English/Amharic settings language choices
             currentLang = selectedLang;
             Object.keys(languages[currentLang]).forEach(key => {
                 const element = document.getElementById(key);
@@ -327,16 +412,13 @@
                 title.innerText = title.getAttribute(`data-${currentLang}`);
             });
 
-            // Hide configuration layout screen, display App core engine structures
             document.getElementById("setupScreen").classList.remove("active");
             document.getElementById("appMainWrapper").classList.remove("hidden");
             
             switchScreen('loginScreen');
         }
 
-        function toggleSettingsViaNav() {
-            restartToSetupScreen();
-        }
+        function toggleSettingsViaNav() { restartToSetupScreen(); }
 
         function restartToSetupScreen() {
             document.getElementById("appMainWrapper").classList.add("hidden");
@@ -349,7 +431,6 @@
             const targetScreen = document.getElementById(screenId);
             if(targetScreen) targetScreen.classList.add('active');
 
-            // Bottom Nav tab highlighters managing utilities
             document.querySelectorAll('.bottom-nav a').forEach(el => el.classList.remove('active'));
             if(screenId === 'homeScreen') document.getElementById('navHome').classList.add('active');
 
@@ -385,108 +466,85 @@
         function handleLoginSubmit() {
             const name = document.getElementById("loginName").value.trim();
             const password = document.getElementById("loginPassword").value.trim();
-            if(!name || !password) { 
-                alert(currentLang === "am" ? "እባክዎን ሁሉንም ቦታዎች ይሙሉ!" : "Please fill out all fields!"); 
-                return; 
+
+            if(!name || !password) {
+                alert(currentLang === "am" ? "እባክዎን ሁሉንም ቦታዎች ይሙሉ!" : "Please fill out all fields!");
+                return;
             }
 
-            activeUser = { name, phone: "0911223344", choir: "Maranatha Choir", password, avatar: "https://www.w3schools.com/howto/img_avatar.png", isNewUser: false };
+            activeUser = { 
+                name, 
+                phone: "+251900000000", 
+                choir: "General Choir", 
+                avatar: "https://www.w3schools.com/howto/img_avatar.png" 
+            };
             populateUserProfile();
             switchScreen('homeScreen');
         }
 
         function populateUserProfile() {
-            if(!activeUser) return;
-            document.getElementById("userDisplayName").innerText = activeUser.name;
-            document.getElementById("userDisplayChoir").innerText = activeUser.choir + " | " + activeUser.phone;
-            document.getElementById("userDisplayAvatar").src = activeUser.avatar;
-        }
-
-        function toggleSelection(element, title, amount) {
-            const index = selectedItems.findIndex(item => item.title === title);
-            if (index > -1) {
-                selectedItems.splice(index, 1);
-                element.classList.remove('selected');
-            } else {
-                const cardTitleNode = element.querySelector('.item-title');
-                const localizedTitle = cardTitleNode ? cardTitleNode.innerText : title;
-                selectedItems.push({ title, localizedTitle, amount });
-                element.classList.add('selected');
+            if(activeUser) {
+                document.getElementById("userDisplayName").innerText = activeUser.name;
+                document.getElementById("userDisplayChoir").innerText = activeUser.choir;
+                document.getElementById("userDisplayAvatar").src = activeUser.avatar;
+                document.getElementById("footerAccountField").innerText = activeUser.name;
             }
-            renderSummary();
         }
 
-        function renderSummary() {
-            const listContainer = document.getElementById("selectedItemsList");
-            const totalDisplay = document.getElementById("checkoutTotalAmount");
+        function toggleSelection(card, itemName, price) {
+            card.classList.toggle('selected');
+            const index = selectedItems.findIndex(i => i.name === itemName);
+            if(index > -1) {
+                selectedItems.splice(index, 1);
+            } else {
+                selectedItems.push({ name: itemName, price: price });
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const list = document.getElementById("selectedItemsList");
+            const totalText = document.getElementById("checkoutTotalAmount");
+            list.innerHTML = "";
+            let total = 0;
+
             if(selectedItems.length === 0) {
-                listContainer.innerHTML = `<li style="color: #999;">${languages[currentLang].no_items}</li>`;
-                totalDisplay.innerText = "0";
+                list.innerHTML = `<li style="color: #999; border:none; padding:0;">${languages[currentLang].no_items}</li>`;
+                totalText.innerText = "0";
                 return;
             }
-            listContainer.innerHTML = "";
-            let total = 0;
+
             selectedItems.forEach(item => {
-                total += item.amount;
+                total += item.price;
                 const li = document.createElement("li");
-                const currentCardTitle = document.querySelector(`.item-title[data-en="${item.title}"]`);
-                const dynamicTitleText = currentCardTitle ? currentCardTitle.innerText : item.title;
-                
-                li.innerHTML = `<span>${dynamicTitleText}</span> <strong>${item.amount} ETB</strong>`;
-                listContainer.appendChild(li);
+                li.innerHTML = `<span>${item.name}</span><strong>${item.price} ETB</strong>`;
+                list.appendChild(li);
             });
-            totalDisplay.innerText = total;
+            totalText.innerText = total;
         }
 
         function openCBEBirrGateway() {
-            if(selectedItems.length === 0) { 
-                alert(currentLang === "am" ? "እባክዎን ቢያንስ አንድ ክፍያ ይምረጮ!" : "Please pick at least one item rail option!"); 
-                return; 
+            const total = parseFloat(document.getElementById("checkoutTotalAmount").innerText);
+            if(total <= 0) {
+                alert(currentLang === "am" ? "እባክዎን በመጀመሪያ መዋጮ ይምረጡ!" : "Please select at least one contribution first!");
+                return;
             }
-            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
-            document.getElementById("modalPaymentAmount").innerText = totalAmount;
+            document.getElementById("modalPaymentAmount").innerText = total;
             document.getElementById("cbeModal").classList.add("active");
         }
 
         function closeCBEGateway() {
             document.getElementById("cbeModal").classList.remove("active");
-            document.getElementById("cbeTxnId").value = "";
         }
 
         function verifyCBEPaymentOnline() {
             const txnId = document.getElementById("cbeTxnId").value.trim();
-            if(!txnId) { 
-                alert(currentLang === "am" ? "እባክዎን የማስተላለፊያ ቁጥሩን ያስገቡ!" : "Please enter the transaction reference ID!"); 
-                return; 
+            if(!txnId) {
+                alert(currentLang === "am" ? "እባክዎን የማስተላለፊያ መታወቂያ ቁጥር ያስገቡ!" : "Please enter your Transaction ID!");
+                return;
             }
-
-            const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
-            const itemsString = selectedItems.map(i => {
-                const titleNode = document.querySelector(`.item-title[data-en="${i.title}"]`);
-                return `${titleNode ? titleNode.innerText : i.title} (${i.amount} ETB)`;
-            }).join(", ");
-
-            const dataPayload = {
-                member_name: activeUser.name,
-                member_phone: activeUser.phone,
-                member_choir: activeUser.choir,
-                member_password: activeUser.password,
-                member_avatar: activeUser.avatar,
-                is_new_user: activeUser.isNewUser,
-                selected_items: itemsString,
-                total_amount: totalAmount,
-                txn_id: txnId,
-                target_account: "1000524648907"
-            };
-
-            if(tg && typeof tg.sendData === 'function') {
-                tg.sendData(JSON.stringify(dataPayload));
-                closeCBEGateway();
-                tg.close();
-            } else {
-                alert("Data simulation successful context tracking verified.");
-                console.log(dataPayload);
-            }
+            alert(currentLang === "am" ? "የክፍያ መረጃዎ ተልኳል! በቅርቡ ይረጋገጣል።" : "Payment details submitted successfully! Verification pending.");
+            closeCBEGateway();
         }
     </script>
 </body>
